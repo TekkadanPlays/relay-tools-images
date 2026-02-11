@@ -26,10 +26,13 @@ fi
 
 # Attempt renewal
 # certbot renew will only actually renew if the cert is within 30 days of expiry
+# Use --http-01-port 8080 so certbot doesn't conflict with haproxy on port 80.
+# HAProxy forwards /.well-known/acme-challenge/ to 127.0.0.1:8080.
 certbot renew \
     --config-dir="$CERT_DIR" \
     --work-dir="$CERT_DIR" \
     --logs-dir="$CERT_DIR" \
+    --http-01-port 8080 \
     --non-interactive
 
 # Check if renewal happened
