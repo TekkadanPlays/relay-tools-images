@@ -8,10 +8,15 @@ echo $PASSWORD>$RD/$APP.passwd
 cp -rfpu $RD/debian /var/lib/machines/$APP
 mkdir -p /var/lib/machines/$APP/app
 cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
 mkdir -p /srv/strfry
 cp $SD/strfrycheck.service /var/lib/machines/$APP/lib/systemd/system/strfrycheck.service
 cp $SD/interceptor.service /var/lib/machines/$APP/lib/systemd/system/interceptor.service
 cp $SD/strfrycheck.timer /var/lib/machines/$APP/lib/systemd/system/strfrycheck.timer
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/strfrycheck.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/interceptor.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/strfrycheck.timer
 systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	export PATH=/usr/local/go/bin:$PATH
 	echo -e "$PASSWORD\n$PASSWORD" | passwd

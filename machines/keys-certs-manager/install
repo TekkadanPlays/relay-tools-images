@@ -8,10 +8,15 @@ echo $PASSWORD>$RD/$APP.passwd
 cp -rfpu $RD/debian /var/lib/machines/$APP
 mkdir /var/lib/machines/$APP/app
 cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
 cp $SD/certrenew.sh /var/lib/machines/$APP/app/certrenew.sh
 chmod +x /var/lib/machines/$APP/app/certrenew.sh
 cp $SD/certrenew.service /etc/systemd/system/certrenew.service
 cp $SD/certrenew.timer /etc/systemd/system/certrenew.timer
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /var/lib/machines/$APP/app/certrenew.sh
+sed -i 's/\r$//' /etc/systemd/system/certrenew.service
+sed -i 's/\r$//' /etc/systemd/system/certrenew.timer
 systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	. /etc/bash.bashrc
 	echo -e "$PASSWORD\n$PASSWORD" | passwd

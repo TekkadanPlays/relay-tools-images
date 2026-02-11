@@ -45,6 +45,9 @@ mkdir -p /srv/mysql
 
 mkdir -p /srv/relaycreator
 
+# Strip CRLF from all scripts and config files (Windows clone protection)
+find $SD -type f \( -name "*.sh" -o -name "*.service" -o -name "*.timer" -o -name "*.nspawn" -o -name "*.cfg" -o -name "*.http" -o -name "install" -o -name "configure.sh" -o -name "build" -o -name "clean" -o -name "console" -o -name "start" -o -name "stop" -o -name "status" \) -exec sed -i 's/\r$//' {} +
+
 # build each image
 cd strfry
 ./install

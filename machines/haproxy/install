@@ -10,6 +10,10 @@ mkdir /var/lib/machines/$APP/app
 cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
 cp $SD/haproxycheck.service /var/lib/machines/$APP/lib/systemd/system/haproxycheck.service
 cp $SD/haproxycheck.timer /var/lib/machines/$APP/lib/systemd/system/haproxycheck.timer
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/haproxycheck.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/haproxycheck.timer
 mkdir -p /srv/haproxy
 systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	. /etc/bash.bashrc
@@ -42,4 +46,6 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	systemctl enable haproxycheck.timer
 EOF
 cp -rf $SD/skel/* /srv/haproxy
+# Strip CRLF from haproxy config files
+find /srv/haproxy -type f \( -name "*.cfg" -o -name "*.http" \) -exec sed -i 's/\r$//' {} +
 systemctl stop systemd-nspawn@$APP

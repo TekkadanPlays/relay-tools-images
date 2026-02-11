@@ -13,6 +13,10 @@ mkdir /var/lib/machines/$APP
 cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
 cp $SD/firstrun.sh /var/lib/machines/$APP/usr/local/bin/firstrun.sh
 cp $SD/firstrun.service /var/lib/machines/$APP/lib/systemd/system/firstrun.service
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /var/lib/machines/$APP/usr/local/bin/firstrun.sh
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/firstrun.service
 systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	. /etc/bash.bashrc
 	echo -e "$PASSWORD\n$PASSWORD" | passwd
