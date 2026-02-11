@@ -27,10 +27,13 @@ cat <<EOF> /var/lib/mysql/.creator-mysql-uri.txt
 DATABASE_URL="mysql://creator:$userpass@127.0.0.1:3306/creator"
 EOF
 
-# create the database and user
+# create the database and user (use mysql_native_password for TCP/IP auth)
 mariadb <<EOF
-create database creator;
-GRANT ALL PRIVILEGES ON creator.* TO 'creator'@'%' IDENTIFIED BY '$userpass';
+create database IF NOT EXISTS creator;
+CREATE USER IF NOT EXISTS 'creator'@'%' IDENTIFIED VIA mysql_native_password USING PASSWORD('$userpass');
+CREATE USER IF NOT EXISTS 'creator'@'localhost' IDENTIFIED VIA mysql_native_password USING PASSWORD('$userpass');
+GRANT ALL PRIVILEGES ON creator.* TO 'creator'@'%';
+GRANT ALL PRIVILEGES ON creator.* TO 'creator'@'localhost';
 FLUSH PRIVILEGES;
 EOF
 
