@@ -1,0 +1,37 @@
+#!/usr/bin/bash
+# get paths for scripts, the repo parent dir and app name
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+RD="$(dirname "$SD")"
+PASSWORD=creator
+echo $PASSWORD>$RD/$APP.passwd
+cp -rfpu $RD/debian /var/lib/machines/$APP
+mkdir -p /srv/keydb
+cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
+systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
+	. /etc/bash.bashrc
+	echo -e "$PASSWORD\n$PASSWORD" | passwd
+	echo "$APP">/etc/hostname
+	apt update
+	apt -y install curl ca-certificates build-essential nasm autotools-dev autoconf libjemalloc-dev tcl libcurl4-openssl-dev libssl-dev pkg-config git --no-install-suggests
+
+	# Build KeyDB from source (Redis-compatible, high-performance)
+	cd /tmp
+	git clone https://github.com/Snapchat/KeyDB.git --depth 1
+	cd KeyDB
+	make -j\$(nproc)
+	make install
+	rm -rf /tmp/KeyDB
+
+	# Create keydb user and data directory
+	useradd -r -m -d /home/keydb keydb
+	mkdir -p /home/keydb/data
+	chown -R keydb:keydb /home/keydb
+
+	systemctl enable app
+EOF
+systemctl stop systemd-nspawn@$APP

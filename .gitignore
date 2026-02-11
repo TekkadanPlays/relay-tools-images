@@ -3,3 +3,5 @@ machines/export
 debian
 .passwd
 *.passwd
+coinos-server/
+coinos-ui/

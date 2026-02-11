@@ -271,4 +271,91 @@ LNEOF
     echo "  5. Restart relaycreator: machinectl shell relaycreator systemctl restart app"
 fi
 
+# ─── OPTIONAL: CoinOS wallet server ───
+# Set COINOS_ENABLED=true in .env to activate this section.
+# Requires: machines/keydb, machines/coinos to be installed.
+# Also requires PAYMENTS_ENABLED=true (Bitcoin Knots + CLN must be running).
+
+if [ "${COINOS_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up CoinOS: KeyDB + coinos-server ==="
+
+    if [ "${PAYMENTS_ENABLED:-false}" != "true" ]; then
+        echo "ERROR: CoinOS requires PAYMENTS_ENABLED=true (Bitcoin Knots + CLN + LNBits)"
+        echo "Set PAYMENTS_ENABLED=true in .env and re-run configure.sh"
+        exit 1
+    fi
+
+    # ── KeyDB ──
+    mkdir -p /srv/keydb
+    cp /var/lib/machines/keydb/../machines/keydb/keydb.conf /srv/keydb/keydb.conf 2>/dev/null || true
+
+    machinectl start keydb
+    echo "KeyDB started."
+
+    # Wait for KeyDB to be ready
+    KDB_WAIT=0
+    while ! systemd-nspawn --pipe -q -M keydb /usr/local/bin/keydb-cli ping 2>/dev/null | grep -q PONG; do
+        sleep 1
+        KDB_WAIT=$((KDB_WAIT + 1))
+        if [ $KDB_WAIT -ge 30 ]; then
+            echo "WARNING: KeyDB not ready after 30s."
+            break
+        fi
+    done
+
+    # ── CoinOS Server ──
+    # Generate config.ts pointing to our infrastructure
+    COINOS_JWT=$(openssl rand -hex 32)
+
+    # Reuse nostr keys from relaycreator
+    source /srv/relaycreator/.nostrcreds.env
+
+    # Generate nsec from private key for coinos config
+    # coinos-server expects nsec-encoded keys
+    COINOS_NSEC1=$(systemd-nspawn --pipe -q -M haproxy /bin/bash -c "echo $NOSTR_PRIVATE_KEY | /usr/local/bin/npub2hex --to-nsec 2>/dev/null" || echo "")
+    COINOS_NSEC2=$(openssl rand -hex 32)
+
+    mkdir -p /srv/coinos
+    mkdir -p /srv/coinos/uploads
+    cat << COINEOF > /srv/coinos/config.ts
+export default {
+  db: "redis://127.0.0.1:6379",
+  archive: "redis://127.0.0.1:6379",
+  nostr: "ws://127.0.0.1:7777",
+  relays: [
+    "ws://127.0.0.1:7777",
+    "wss://relay.damus.io",
+    "wss://relay.primal.net",
+    "wss://nos.lol"
+  ],
+  jwt: "$COINOS_JWT",
+  bitcoin: {
+    host: "127.0.0.1",
+    wallet: "coinos",
+    user: "$BTC_RPC_USER",
+    password: "$BTC_RPC_PASS",
+    network: "bitcoin",
+    port: 8332,
+  },
+  lightning: "/app/data/lightning/bitcoin/lightning-rpc",
+  fee: 0.001,
+  adminpass: "$(openssl rand -hex 16)",
+  support: "admin@$MYDOMAIN",
+  nostrKey: "$COINOS_NSEC1",
+  nostrKey2: "$COINOS_NSEC2",
+};
+COINEOF
+
+    machinectl start coinos
+    echo "CoinOS server started on port 3119."
+
+    echo ""
+    echo "=== CoinOS deployed ==="
+    echo "KeyDB: redis://127.0.0.1:6379"
+    echo "CoinOS API: http://127.0.0.1:3119"
+    echo ""
+    echo "CoinOS is now available as a wallet backend for relay.tools."
+    echo "The admin panel in relay.tools will connect to http://127.0.0.1:3119"
+fi
+
 echo "All done!"

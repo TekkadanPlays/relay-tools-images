@@ -1,0 +1,16 @@
+[Unit]
+Description=KeyDB Server
+After=network.target
+
+[Service]
+Type=simple
+User=keydb
+Group=keydb
+ExecStart=/usr/local/bin/keydb-server /home/keydb/data/keydb.conf
+ExecStop=/usr/local/bin/keydb-cli shutdown
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

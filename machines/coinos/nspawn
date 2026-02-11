@@ -1,0 +1,13 @@
+[Exec]
+Boot=no
+Parameters=/usr/local/bin/bun run /app/index.ts
+PrivateUsers=no
+LimitNOFILE=infinity
+WorkingDirectory=/app
+Environment=NODE_OPTIONS=--import=/app/hooks.js
+[Network]
+VirtualEthernet=no
+[Files]
+Bind=/srv/coinos/config.ts:/app/config.ts
+Bind=/srv/coinos/uploads:/app/data/uploads
+Bind=/srv/cln:/app/data/lightning

@@ -1,0 +1,16 @@
+[Unit]
+Description=CoinOS Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/app
+ExecStart=/usr/local/bin/bun run /app/index.ts
+Restart=on-failure
+RestartSec=10
+Environment=HOST=0.0.0.0
+Environment=PORT=3119
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

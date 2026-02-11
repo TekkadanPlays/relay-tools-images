@@ -1,0 +1,43 @@
+#!/usr/bin/bash
+# get paths for scripts, the repo parent dir and app name
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+RD="$(dirname "$SD")"
+PASSWORD=creator
+echo $PASSWORD>$RD/$APP.passwd
+cp -rfpu $RD/debian /var/lib/machines/$APP
+mkdir -p /var/lib/machines/$APP/app
+mkdir -p /srv/coinos
+mkdir -p /srv/coinos/uploads
+cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
+cp $SD/deploy.service /var/lib/machines/$APP/lib/systemd/system/deploy.service
+cp $SD/deploy.timer /var/lib/machines/$APP/lib/systemd/system/deploy.timer
+cp $SD/deploy.sh /var/lib/machines/$APP/usr/local/bin/deploy.sh
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/deploy.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/deploy.timer
+sed -i 's/\r$//' /var/lib/machines/$APP/usr/local/bin/deploy.sh
+systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
+	. /etc/bash.bashrc
+	echo -e "$PASSWORD\n$PASSWORD" | passwd
+	echo "$APP">/etc/hostname
+	apt update
+	apt -y install curl ca-certificates git unzip --no-install-suggests
+
+	# Install Bun runtime
+	curl -fsSL https://bun.sh/install | bash
+	ln -sf /root/.bun/bin/bun /usr/local/bin/bun
+	ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx
+
+	# Clone coinos-server
+	git clone https://github.com/TekkadanPlays/coinos-server.git /app
+	cd /app
+	bun install
+
+	systemctl enable app
+	systemctl enable deploy.timer
+EOF
+systemctl stop systemd-nspawn@$APP

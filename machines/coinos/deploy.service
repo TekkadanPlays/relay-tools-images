@@ -1,0 +1,6 @@
+[Unit]
+Description=CoinOS deploy check
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/deploy.sh
