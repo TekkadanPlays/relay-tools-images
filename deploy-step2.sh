@@ -1,5 +1,5 @@
 #!/bin/bash
-systemd-nspawn --pipe -q -M relaycreator /bin/bash << 'EOF'
+machinectl shell relaycreator /bin/bash -c '
 cd /app
 git remote set-url origin https://github.com/TekkadanPlays/relaycreator.git
 git fetch origin
@@ -21,4 +21,4 @@ npx vite build
 cd /app
 systemctl start app
 echo "Step 2 done: Deploy complete"
-EOF
+'
