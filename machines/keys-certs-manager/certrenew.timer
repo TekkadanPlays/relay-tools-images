@@ -1,0 +1,11 @@
+[Unit]
+Description=Run certificate renewal check twice daily
+
+[Timer]
+# Twice daily with randomized delay, per certbot best practices
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

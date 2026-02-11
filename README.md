@@ -14,13 +14,15 @@ Note that all `console` scripts provide a password for root to login, which is c
 
 ## subfolders/nspawn images
 
-Within the subfolders `haproxy`, `mysql`, `relaycreator` and `strfry` there is a common set of functions whose choice of names for the nspawn images is based on the directory name. These contain the following common scripts/functions:
+Within the subfolders `haproxy`, `mysql`, `relaycreator`, `strfry` and `keys-certs-manager` there is a common set of functions whose choice of names for the nspawn images is based on the directory name. These contain the following common scripts/functions:
 
 - `clean` - deletes the image and all the deployment related files in `/etc/systemd/nspawn` and `/var/lib/machines`. generally these do not touch any bind mount folders.
 - `console` - starts up the nspawn machine using `machinectl` and logs you in to it. the password the `install` script defines is printed prior to the login so you can c&p it after typing `root` into the user prompt.
 - `start` - just starts up the nspawn image. requires that it exist, of course.
 - `status` - calls `machinectl status <imagename>` which probably will open with a pager. Of course to see all currently running images `machinectl list`.
-- `stop` - stops the nspawn image. will print nothing if it doesn't exist# install
+- `stop` - stops the nspawn image. will print nothing if it doesn't exist
+
+# install
 
 in each subfolder there is a script called `install`. 
 
@@ -41,9 +43,20 @@ cd relay-tools-images/machines
 # first: setup DNS to point at this server's IP address
 # set the environment variable to your DNS
 export MYDOMAIN=example.com
+# optional: set email for Let's Encrypt expiry notifications
+export MYEMAIL=you@example.com
 ./configure.sh
+# enable all machines to start on boot
+machinectl enable mysql && machinectl enable strfry && machinectl enable relaycreator && machinectl enable haproxy
 ```
 
 ## todo
 
-- [ ] implement certificate and keys automatic config/rotation
+- [x] implement certificate and keys automatic config/rotation
+- [x] fix bundle.pem path mismatch in configure.sh
+- [x] fix missing haproxy bind mount for /srv/relaycreator
+- [x] add keys-certs-manager to build script
+- [x] add mysql wait timeout in configure.sh
+- [x] upgrade Node.js 18 to 20, pin pnpm to v9
+- [x] add .gitattributes for LF line endings
+- [x] set executable permissions on all scripts

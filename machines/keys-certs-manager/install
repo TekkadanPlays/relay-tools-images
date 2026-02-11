@@ -8,17 +8,21 @@ echo $PASSWORD>$RD/$APP.passwd
 cp -rfpu $RD/debian /var/lib/machines/$APP
 mkdir /var/lib/machines/$APP/app
 cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+cp $SD/certrenew.sh /var/lib/machines/$APP/app/certrenew.sh
+chmod +x /var/lib/machines/$APP/app/certrenew.sh
+cp $SD/certrenew.service /etc/systemd/system/certrenew.service
+cp $SD/certrenew.timer /etc/systemd/system/certrenew.timer
 systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	. /etc/bash.bashrc
 	echo -e "$PASSWORD\n$PASSWORD" | passwd
 	echo "$APP">/etc/hostname
 
 	apt update
-	apt -y install --no-install-suggests git certbot gpg curl
+	apt -y install --no-install-suggests git certbot gpg curl openssl
 
 	# build and install nostr key generator helper
-	git clone https://github.com/jeremyd/npub2hex.git /app
-	cd /app
+	git clone https://github.com/jeremyd/npub2hex.git /npub2hex
+	cd /npub2hex
 	/usr/local/go/bin/go build
 	cp npub2hex /usr/local/bin/npub2hex
 EOF

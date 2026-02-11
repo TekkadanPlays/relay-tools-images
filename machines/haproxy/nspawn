@@ -9,3 +9,4 @@ LinkJournal=try-host
 VirtualEthernet=no
 [Files]
 Bind=/srv/haproxy:/etc/haproxy
+Bind=/srv/relaycreator:/srv/relaycreator

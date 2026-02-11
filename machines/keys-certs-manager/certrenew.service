@@ -1,0 +1,13 @@
+[Unit]
+Description=Renew Let's Encrypt certificates and reload haproxy
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/srv/relaycreator/.env
+ExecStart=/bin/bash -c 'systemd-nspawn --pipe -M keys-certs-manager /bin/bash /app/certrenew.sh ${NEXT_PUBLIC_CREATOR_DOMAIN}'
+ExecStartPost=/bin/bash -c 'machinectl shell haproxy /bin/bash -c "systemctl reload haproxy || systemctl restart haproxy"'
+
+[Install]
+WantedBy=multi-user.target

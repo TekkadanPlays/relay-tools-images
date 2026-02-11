@@ -35,8 +35,6 @@ EOF
 # for use with: haproxy
 # configured in: relaycreator (path), haproxy (bundle.pem file)
 
-## TODO: how does this work with .. wireguard, tor, tailscale?  multi-domains?  ugh
-
 if [ -n "$SELF_SIGNED" ]; then
     MYDOMAIN=$SELF_SIGNED
 systemd-nspawn --pipe -M haproxy /bin/bash << EOR
@@ -50,8 +48,7 @@ EOR
 else
 
 # since haproxy is not started yet, use standalone web mode
-# For Re-configuration (renew), we should setup ACME support for haproxy
-# Done: we have ACME support, However, We have not setup a cronjob for this yet.. (and should)
+# Automatic renewal is handled by certrenew.timer (enabled below after haproxy starts)
 systemd-nspawn --pipe -M keys-certs-manager /bin/bash << EOF
     mkdir -p /etc/haproxy/certs
 
@@ -61,9 +58,9 @@ systemd-nspawn --pipe -M keys-certs-manager /bin/bash << EOF
         certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" -d "$MYDOMAIN" --agree-tos -m "$MYEMAIL" --standalone --preferred-challenges http --non-interactive
     fi
 
-    # haproxy needs one file
-    cat /etc/haproxy/certs/live/$MYDOMAIN/fullchain.pem /etc/haproxy/certs/live/$MYDOMAIN/privkey.pem > /etc/haproxy/certs/bundle.pem
-
+    # haproxy needs one file (write to bind mount so haproxy container can see it)
+    mkdir -p /srv/haproxy/certs
+    cat /etc/haproxy/certs/live/$MYDOMAIN/fullchain.pem /etc/haproxy/certs/live/$MYDOMAIN/privkey.pem > /srv/haproxy/certs/bundle.pem
     chmod 0600 /srv/haproxy/certs/bundle.pem
 
 EOF
@@ -74,11 +71,16 @@ echo "$MYDOMAIN"
 
 source /srv/relaycreator/.nostrcreds.env
 
-# wait for mysql configuration to exist
-
-while [ ! -f "/srv/mysql/.creator-mysql-uri.txt" ]
-do
-  sleep 1
+# wait for mysql configuration to exist (timeout after 120 seconds)
+MYSQL_WAIT=0
+while [ ! -f "/srv/mysql/.creator-mysql-uri.txt" ]; do
+    sleep 1
+    MYSQL_WAIT=$((MYSQL_WAIT + 1))
+    if [ $MYSQL_WAIT -ge 120 ]; then
+        echo "ERROR: MySQL did not initialize within 120 seconds."
+        echo "Check: machinectl status mysql"
+        exit 1
+    fi
 done
 
 source /srv/mysql/.creator-mysql-uri.txt
@@ -97,6 +99,7 @@ NEXT_PUBLIC_ROOT_DOMAIN=https://$MYDOMAIN
 
 # haproxy settings
 NEXT_PUBLIC_CREATOR_DOMAIN=$MYDOMAIN
+CERTBOT_EMAIL=$MYEMAIL
 HAPROXY_PEM=bundle.pem
 HAPROXY_STATS_USER=haproxy
 HAPROXY_STATS_PASS=haproxy
@@ -119,6 +122,13 @@ EOF
 
 # Launch haproxy
 machinectl start haproxy
+
+# Enable automatic certificate renewal (skip for self-signed)
+if [ -z "$SELF_SIGNED" ]; then
+    systemctl daemon-reload
+    systemctl enable --now certrenew.timer
+    echo "Certificate auto-renewal timer enabled (runs twice daily)"
+fi
 
 # Configure strfry management daemon (cookiecutter)
 cat << EOF > /srv/strfry/.cookiecutter.env
