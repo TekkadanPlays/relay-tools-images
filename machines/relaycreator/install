@@ -31,31 +31,6 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	git clone https://github.com/relaytools/relaycreator.git /app
 	npm install -g pnpm@9
 	npm install -g prisma
-	# Install Preact for ~30% smaller production bundle
-	pnpm install preact
-	# Inject Preact alias into next.config.js (replaces React in production builds)
-	node -e "
-const fs = require('fs');
-const cfg = fs.readFileSync('/app/next.config.js', 'utf8');
-const alias = \`
-    webpack: (config, { isServer }) => {
-        if (!isServer) {
-            Object.assign(config.resolve.alias, {
-                'react/jsx-runtime': 'preact/compat/jsx-runtime',
-                react: 'preact/compat',
-                'react-dom/test-utils': 'preact/test-utils',
-                'react-dom': 'preact/compat',
-            });
-        }
-        return config;
-    },\`;
-const patched = cfg.replace(
-    'reactStrictMode: false,',
-    'reactStrictMode: false,' + alias
-);
-fs.writeFileSync('/app/next.config.js', patched);
-console.log('Preact alias injected into next.config.js');
-"
 	pnpm install
 	pnpm run build
 	systemctl enable app
