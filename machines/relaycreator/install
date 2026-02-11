@@ -28,7 +28,7 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 	apt -y install nodejs
 	cd /app
-	git clone https://github.com/relaytools/relaycreator.git /app
+	git clone https://github.com/TekkadanPlays/relaycreator.git /app
 	npm install -g pnpm@9
 	npm install -g prisma
 	pnpm install
