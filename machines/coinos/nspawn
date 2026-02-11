@@ -1,10 +1,9 @@
 [Exec]
-Boot=no
-Parameters=/usr/local/bin/bun run /app/index.ts
+Boot=yes
+Parameters=
 PrivateUsers=no
 LimitNOFILE=infinity
-WorkingDirectory=/app
-Environment=NODE_OPTIONS=--import=/app/hooks.js
+LinkJournal=try-host
 [Network]
 VirtualEthernet=no
 [Files]
