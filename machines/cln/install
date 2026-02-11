@@ -20,18 +20,17 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	apt update
 	apt -y install curl ca-certificates gpg --no-install-suggests
 
-	# Install Core Lightning from official Ubuntu PPA
-	curl -fsSL https://raw.githubusercontent.com/ElementsProject/lightning/master/contrib/keys/cdecker-github.gpg | gpg --dearmor -o /usr/share/keyrings/cln-archive-keyring.gpg
-	echo "deb [signed-by=/usr/share/keyrings/cln-archive-keyring.gpg] https://apt.corelightning.org bookworm main" > /etc/apt/sources.list.d/cln.list
-	apt update
-	apt -y install core-lightning || {
-		# Fallback: download binary release if PPA not available for this distro
-		CLN_VERSION="25.02"
-		cd /tmp
-		curl -LO "https://github.com/ElementsProject/lightning/releases/download/v\${CLN_VERSION}/clightning-v\${CLN_VERSION}-Ubuntu-24.04.tar.xz"
-		tar xf "clightning-v\${CLN_VERSION}-Ubuntu-24.04.tar.xz" -C /usr/local --strip-components=2
-		rm -f /tmp/clightning-*
-	}
+	# Install Core Lightning v25.12.1 from pre-built Ubuntu binary
+	# Ubuntu 22.04 binaries are compatible with Debian bookworm
+	apt -y install xz-utils libsqlite3-0 libsodium23 libpq5 --no-install-suggests
+	CLN_VERSION="25.12.1"
+	cd /tmp
+	curl -L -o "clightning-v\${CLN_VERSION}.tar.xz" \
+		"https://github.com/ElementsProject/lightning/releases/download/v\${CLN_VERSION}/clightning-v\${CLN_VERSION}-Ubuntu-22.04.tar.xz"
+	tar xf "clightning-v\${CLN_VERSION}.tar.xz" -C /usr/local --strip-components=2
+	rm -f /tmp/clightning-*
+	# Verify installation
+	lightningd --version || echo "WARNING: lightningd not found in PATH"
 
 	# Create lightning user and data directory
 	useradd -r -m -d /home/lightning lightning
