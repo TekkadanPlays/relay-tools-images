@@ -25,9 +25,9 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	apt -y install xz-utils libsqlite3-0 libsodium23 libpq5 --no-install-suggests
 	CLN_VERSION="25.12.1"
 	cd /tmp
-	curl -L -o "clightning-v\${CLN_VERSION}.tar.xz" \
-		"https://github.com/ElementsProject/lightning/releases/download/v\${CLN_VERSION}/clightning-v\${CLN_VERSION}-Ubuntu-22.04.tar.xz"
-	tar xf "clightning-v\${CLN_VERSION}.tar.xz" -C /usr/local --strip-components=2
+	curl -L -o "clightning-v\${CLN_VERSION}-Ubuntu-22.04-amd64.tar.xz" \
+		"https://github.com/ElementsProject/lightning/releases/download/v\${CLN_VERSION}/clightning-v\${CLN_VERSION}-Ubuntu-22.04-amd64.tar.xz"
+	tar xf "clightning-v\${CLN_VERSION}-Ubuntu-22.04-amd64.tar.xz" -C /usr/local --strip-components=2
 	rm -f /tmp/clightning-*
 	# Verify installation
 	lightningd --version || echo "WARNING: lightningd not found in PATH"
