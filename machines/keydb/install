@@ -17,7 +17,7 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	echo -e "$PASSWORD\n$PASSWORD" | passwd
 	echo "$APP">/etc/hostname
 	apt update
-	apt -y install curl ca-certificates build-essential nasm autotools-dev autoconf libjemalloc-dev tcl libcurl4-openssl-dev libssl-dev pkg-config git --no-install-suggests
+	apt -y install curl ca-certificates build-essential nasm autotools-dev autoconf libjemalloc-dev tcl libcurl4-openssl-dev libssl-dev pkg-config git uuid-dev --no-install-suggests
 
 	# Build KeyDB from source (Redis-compatible, high-performance)
 	cd /tmp
