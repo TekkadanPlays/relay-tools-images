@@ -3,10 +3,11 @@ Description=relaycreator app
 Wants=network.target
 
 [Service]
-ExecStart=/app/node_modules/.bin/next start
-WorkingDirectory=/app
+ExecStart=/usr/bin/node /app/api-server/dist/index.js
+WorkingDirectory=/app/api-server
 Restart=always
 User=root
+EnvironmentFile=/app/.env
 Environment=NODE_ENV=production
 Type=simple
 TimeoutStopSec=5

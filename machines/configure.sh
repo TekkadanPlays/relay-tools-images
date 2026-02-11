@@ -85,24 +85,19 @@ done
 
 source /srv/mysql/.creator-mysql-uri.txt
 
-NEXTAUTH_SECRET=`openssl rand -base64 32`
+JWT_SECRET=`openssl rand -base64 32`
 
-# Configure relaycreator .env file
+# Configure relaycreator .env file (Express API server)
 cat << EOF > /srv/relaycreator/.env
-# application settings
+# Express API server settings
 DATABASE_URL=$DATABASE_URL
+JWT_SECRET=$JWT_SECRET
+PORT=4000
+CORS_ORIGIN=https://$MYDOMAIN
 DEPLOY_PUBKEY=$NOSTR_PUBLIC_KEY
-NEXTAUTH_URL=https://$MYDOMAIN
-NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-INVOICE_AMOUNT=21000
-NEXT_PUBLIC_ROOT_DOMAIN=https://$MYDOMAIN
-
-# haproxy settings
-NEXT_PUBLIC_CREATOR_DOMAIN=$MYDOMAIN
-CERTBOT_EMAIL=$MYEMAIL
-HAPROXY_PEM=bundle.pem
-HAPROXY_STATS_USER=haproxy
-HAPROXY_STATS_PASS=haproxy
+CREATOR_DOMAIN=$MYDOMAIN
+INVOICE_AMOUNT=21
+INVOICE_PREMIUM_AMOUNT=2100
 
 # to enable payments you must run LNBITS and set these settings:
 PAYMENTS_ENABLED=false

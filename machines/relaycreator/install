@@ -31,8 +31,21 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	git clone https://github.com/TekkadanPlays/relaycreator.git /app
 	npm install -g pnpm@9
 	npm install -g prisma
+
+	# Build Express API server
+	cd /app/api-server
 	pnpm install
-	pnpm run build
+	npx prisma generate
+
+	# Build React SPA
+	cd /app/web
+	pnpm install
+	npx vite build
+
+	# Build API server (TypeScript -> JS)
+	cd /app/api-server
+	npx tsc
+
 	systemctl enable app
 	systemctl enable deploy.timer
 EOF

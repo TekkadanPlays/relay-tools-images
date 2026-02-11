@@ -4,9 +4,20 @@ deploy_app() {
     echo "detected upstream changes, deploying"
     git pull
     systemctl stop app
+
+    # Build Express API server
+    cd /app/api-server
     pnpm install
-    npx prisma db push --accept-data-loss 2>/dev/null || npx prisma migrate deploy || true
-    pnpm run build
+    npx prisma generate
+    npx prisma db push --accept-data-loss 2>/dev/null || true
+    npx tsc
+
+    # Build React SPA
+    cd /app/web
+    pnpm install
+    npx vite build
+
+    cd /app
     systemctl start app
 }
 
@@ -23,9 +34,10 @@ fi
 git remote update 2>/dev/null || true
 
 if [ ! -f "/firstrun.txt" ]; then
-    # First run: push schema to DB, build, and start
     echo "First run: initializing database schema and building app"
+    cd /app/api-server
     npx prisma db push --accept-data-loss 2>/dev/null || true
+    cd /app
     touch /firstrun.txt
     systemctl restart app
     exit 0
