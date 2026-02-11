@@ -1,0 +1,38 @@
+#!/usr/bin/bash
+# get paths for scripts, the repo parent dir and app name
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+RD="$(dirname "$SD")"
+PASSWORD=creator
+echo $PASSWORD>$RD/$APP.passwd
+cp -rfpu $RD/debian /var/lib/machines/$APP
+mkdir -p /var/lib/machines/$APP/app
+mkdir -p /srv/bitcoinknots
+cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
+systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
+	. /etc/bash.bashrc
+	echo -e "$PASSWORD\n$PASSWORD" | passwd
+	echo "$APP">/etc/hostname
+	apt update
+	apt -y install curl ca-certificates --no-install-suggests
+
+	# Download Bitcoin Knots v29.3 (BIP-110 enabled)
+	KNOTS_VERSION="29.3.knots20260210"
+	cd /tmp
+	curl -LO "https://bitcoinknots.org/files/29.x/\${KNOTS_VERSION}/bitcoin-\${KNOTS_VERSION}-x86_64-linux-gnu.tar.gz"
+	tar xzf "bitcoin-\${KNOTS_VERSION}-x86_64-linux-gnu.tar.gz"
+	install -m 0755 "bitcoin-\${KNOTS_VERSION}/bin/"* /usr/local/bin/
+	rm -rf /tmp/bitcoin-*
+
+	# Create bitcoin user and data directory
+	useradd -r -m -d /home/bitcoin bitcoin
+	mkdir -p /home/bitcoin/.bitcoin
+	chown -R bitcoin:bitcoin /home/bitcoin
+
+	systemctl enable app
+EOF
+systemctl stop systemd-nspawn@$APP

@@ -1,0 +1,43 @@
+#!/usr/bin/bash
+# get paths for scripts, the repo parent dir and app name
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+RD="$(dirname "$SD")"
+PASSWORD=creator
+echo $PASSWORD>$RD/$APP.passwd
+cp -rfpu $RD/debian /var/lib/machines/$APP
+mkdir -p /var/lib/machines/$APP/app
+mkdir -p /srv/cln
+cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
+systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
+	. /etc/bash.bashrc
+	echo -e "$PASSWORD\n$PASSWORD" | passwd
+	echo "$APP">/etc/hostname
+	apt update
+	apt -y install curl ca-certificates gpg --no-install-suggests
+
+	# Install Core Lightning from official Ubuntu PPA
+	curl -fsSL https://raw.githubusercontent.com/ElementsProject/lightning/master/contrib/keys/cdecker-github.gpg | gpg --dearmor -o /usr/share/keyrings/cln-archive-keyring.gpg
+	echo "deb [signed-by=/usr/share/keyrings/cln-archive-keyring.gpg] https://apt.corelightning.org bookworm main" > /etc/apt/sources.list.d/cln.list
+	apt update
+	apt -y install core-lightning || {
+		# Fallback: download binary release if PPA not available for this distro
+		CLN_VERSION="25.02"
+		cd /tmp
+		curl -LO "https://github.com/ElementsProject/lightning/releases/download/v\${CLN_VERSION}/clightning-v\${CLN_VERSION}-Ubuntu-24.04.tar.xz"
+		tar xf "clightning-v\${CLN_VERSION}-Ubuntu-24.04.tar.xz" -C /usr/local --strip-components=2
+		rm -f /tmp/clightning-*
+	}
+
+	# Create lightning user and data directory
+	useradd -r -m -d /home/lightning lightning
+	mkdir -p /home/lightning/.lightning
+	chown -R lightning:lightning /home/lightning
+
+	systemctl enable app
+EOF
+systemctl stop systemd-nspawn@$APP

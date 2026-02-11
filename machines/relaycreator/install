@@ -25,7 +25,7 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	echo "$APP">/etc/hostname
 	apt update
 	apt -y install git curl build-essential
-	curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+	curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 	apt -y install nodejs
 	cd /app
 	git clone https://github.com/TekkadanPlays/relaycreator.git /app

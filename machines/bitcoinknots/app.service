@@ -1,0 +1,18 @@
+[Unit]
+Description=Bitcoin Knots (BIP-110)
+After=network.target
+
+[Service]
+Type=forking
+User=bitcoin
+Group=bitcoin
+ExecStart=/usr/local/bin/bitcoind -daemon -conf=/home/bitcoin/.bitcoin/bitcoin.conf -datadir=/home/bitcoin/.bitcoin
+ExecStop=/usr/local/bin/bitcoin-cli -conf=/home/bitcoin/.bitcoin/bitcoin.conf stop
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=0
+TimeoutStopSec=600
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

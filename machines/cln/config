@@ -1,0 +1,16 @@
+# Core Lightning configuration
+# This file is a template; configure.sh generates the actual config
+# with credentials matching the Bitcoin Knots container.
+
+network=bitcoin
+log-level=info
+
+# Bitcoin Knots RPC connection
+bitcoin-rpcuser=PLACEHOLDER_USER
+bitcoin-rpcpassword=PLACEHOLDER_PASS
+bitcoin-rpcconnect=127.0.0.1
+bitcoin-rpcport=8332
+
+# CLNRest plugin (built-in since v23.08) — used by LNBits
+clnrest-port=3010
+clnrest-host=0.0.0.0
