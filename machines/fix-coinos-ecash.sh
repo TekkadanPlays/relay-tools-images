@@ -1,24 +1,49 @@
 #!/bin/bash
 set -e
 
+# ── Step 0: Stop coinos so bind mounts are released ──
+machinectl terminate coinos 2>/dev/null || true
+sleep 2
+
 # ── Step 1: Rewrite config.ts from scratch ──
 BTC_RPC_PASS=$(grep rpcpassword /srv/bitcoinknots/bitcoin.conf | cut -d= -f2)
 JWT=$(openssl rand -hex 32)
 ADMINPASS=$(openssl rand -hex 16)
 
-# Generate nsec keys using bun+nostr-tools inside the container
-PID=$(machinectl show coinos -p Leader --value)
-NSEC1=$(nsenter -t $PID -m -u -i -n -p -- /usr/local/bin/bun -e "
-import { generateSecretKey } from 'nostr-tools';
-import { nip19 } from 'nostr-tools';
+# Generate nsec keys using bun binary from the container filesystem
+BUN=/var/lib/machines/coinos/root/.bun/bin/bun
+NSEC1=$($BUN -e "
+import { generateSecretKey } from '/var/lib/machines/coinos/app/node_modules/nostr-tools/lib/esm/index.js';
+import { nip19 } from '/var/lib/machines/coinos/app/node_modules/nostr-tools/lib/esm/index.js';
 console.log(nip19.nsecEncode(generateSecretKey()));
-" 2>/dev/null)
+" 2>/dev/null || echo "")
 
-NSEC2=$(nsenter -t $PID -m -u -i -n -p -- /usr/local/bin/bun -e "
+NSEC2=$($BUN -e "
+import { generateSecretKey } from '/var/lib/machines/coinos/app/node_modules/nostr-tools/lib/esm/index.js';
+import { nip19 } from '/var/lib/machines/coinos/app/node_modules/nostr-tools/lib/esm/index.js';
+console.log(nip19.nsecEncode(generateSecretKey()));
+" 2>/dev/null || echo "")
+
+# Fallback: use openssl hex if bun nsec generation failed
+if [ -z "$NSEC1" ] || [ -z "$NSEC2" ]; then
+    echo "bun nsec generation failed, using host bun..."
+    # Start container briefly just to generate keys
+    machinectl start coinos
+    sleep 3
+    PID=$(machinectl show coinos -p Leader --value)
+    NSEC1=$(nsenter -t $PID -m -u -i -n -p -- /usr/local/bin/bun -e "
 import { generateSecretKey } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 console.log(nip19.nsecEncode(generateSecretKey()));
 " 2>/dev/null)
+    NSEC2=$(nsenter -t $PID -m -u -i -n -p -- /usr/local/bin/bun -e "
+import { generateSecretKey } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
+console.log(nip19.nsecEncode(generateSecretKey()));
+" 2>/dev/null)
+    machinectl terminate coinos 2>/dev/null || true
+    sleep 2
+fi
 
 echo "Generated nsec keys: NSEC1=${NSEC1:0:10}... NSEC2=${NSEC2:0:10}..."
 
@@ -92,12 +117,12 @@ export default {
 };
 RTEOF
 
-# ── Step 3: Ensure paths exist ──
-nsenter -t $PID -m -u -i -n -p -- bash -c 'mkdir -p /home/bun && ln -sf /app /home/bun/app && mkdir -p /app/data/uploads' 2>/dev/null || true
+# ── Step 3: Ensure paths exist in the container filesystem ──
+mkdir -p /var/lib/machines/coinos/home/bun
+ln -sf /app /var/lib/machines/coinos/home/bun/app 2>/dev/null || true
+mkdir -p /srv/coinos/uploads
 
-# ── Step 4: Restart ──
-machinectl terminate coinos 2>/dev/null || true
-sleep 2
+# ── Step 4: Start coinos (already terminated in step 0) ──
 machinectl start coinos
 sleep 5
 
