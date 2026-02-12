@@ -10,6 +10,7 @@ Restart=on-failure
 RestartSec=10
 Environment=HOST=0.0.0.0
 Environment=PORT=3119
+Environment=URL=https://mycelium.social
 LimitNOFILE=65536
 
 [Install]

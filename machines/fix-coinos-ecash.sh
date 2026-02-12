@@ -47,11 +47,16 @@ export default { connected: false, reconnect: () => {}, publish: () => {}, subsc
 EOF
 echo "  lib/mqtt.ts: $(wc -c < "$APP/lib/mqtt.ts") bytes"
 
-echo "=== Step 2: Ensure paths ==="
+echo "=== Step 2: Fix app.service (add URL env) ==="
+cp /root/relay-tools-images/machines/coinos/app.service /var/lib/machines/coinos/usr/lib/systemd/system/app.service
+echo "  app.service updated"
+
+echo "=== Step 2b: Ensure paths ==="
 mkdir -p /var/lib/machines/coinos/home/bun
 ln -sf /app /var/lib/machines/coinos/home/bun/app 2>/dev/null || true
 mkdir -p /srv/coinos/uploads
 mkdir -p "$APP/data/sockets"
+mkdir -p /srv/cln/bitcoin
 
 echo "=== Step 3: Generate nsec keys ==="
 # Start container briefly to use bun inside it
