@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/lightningd --conf=/home/lightning/.lightning/config --lightning-dir=/home/lightning/.lightning
+ExecStart=/bin/bash -c 'ulimit -l unlimited && exec /usr/local/bin/lightningd --conf=/home/lightning/.lightning/config --lightning-dir=/home/lightning/.lightning'
 Restart=on-failure
 RestartSec=30
 TimeoutStopSec=300
