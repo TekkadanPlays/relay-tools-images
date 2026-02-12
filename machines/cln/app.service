@@ -4,8 +4,6 @@ After=network.target
 
 [Service]
 Type=simple
-User=lightning
-Group=lightning
 ExecStart=/usr/local/bin/lightningd --conf=/home/lightning/.lightning/config --lightning-dir=/home/lightning/.lightning
 Restart=on-failure
 RestartSec=30
