@@ -20,14 +20,14 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	apt update
 	apt -y install curl ca-certificates gpg --no-install-suggests
 
-	# Install Core Lightning v25.12.1 from pre-built Ubuntu binary
-	# Ubuntu 22.04 binaries are compatible with Debian bookworm
+	# Install Core Lightning v25.12.1 from pre-built Ubuntu 24.04 binary
+	# Ubuntu 24.04 glibc matches Debian trixie (13)
 	apt -y install xz-utils libsqlite3-0 libsodium23 libpq5 --no-install-suggests
 	CLN_VERSION="25.12.1"
 	cd /tmp
-	curl -L -o "clightning-v\${CLN_VERSION}-Ubuntu-22.04-amd64.tar.xz" \
-		"https://github.com/ElementsProject/lightning/releases/download/v\${CLN_VERSION}/clightning-v\${CLN_VERSION}-Ubuntu-22.04-amd64.tar.xz"
-	tar xf "clightning-v\${CLN_VERSION}-Ubuntu-22.04-amd64.tar.xz" -C /usr/local --strip-components=2
+	curl -L -o "clightning-v\${CLN_VERSION}-Ubuntu-24.04-amd64.tar.xz" \
+		"https://github.com/ElementsProject/lightning/releases/download/v\${CLN_VERSION}/clightning-v\${CLN_VERSION}-Ubuntu-24.04-amd64.tar.xz"
+	tar xf "clightning-v\${CLN_VERSION}-Ubuntu-24.04-amd64.tar.xz" -C /usr/local --strip-components=2
 	rm -f /tmp/clightning-*
 	# Verify installation
 	lightningd --version || echo "WARNING: lightningd not found in PATH"
