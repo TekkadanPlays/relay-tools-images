@@ -105,6 +105,11 @@ PAYMENTS_ENABLED=false
 LNBITS_ADMIN_KEY=
 LNBITS_INVOICE_READ_KEY=
 LNBITS_ENDPOINT=
+
+# CoinOS wallet integration
+COINOS_ENABLED=false
+COINOS_ENDPOINT=http://127.0.0.1:3119
+COINOS_API_KEY=nStack
 EOF
 
 # Launch relaycreator
@@ -349,13 +354,36 @@ COINEOF
     machinectl start coinos
     echo "CoinOS server started on port 3119."
 
+    # Wait for CoinOS to be ready
+    COINOS_WAIT=0
+    while ! curl -sf http://127.0.0.1:3119/challenge >/dev/null 2>&1; do
+        sleep 2
+        COINOS_WAIT=$((COINOS_WAIT + 2))
+        if [ $COINOS_WAIT -ge 60 ]; then
+            echo "WARNING: CoinOS not ready after 60s. API key registration skipped."
+            break
+        fi
+    done
+
+    # Register the nStack API key in CoinOS's Redis apikeys set
+    # This allows our API server to bypass reCAPTCHA on CoinOS endpoints
+    COINOS_API_KEY=${COINOS_API_KEY:-nStack}
+    systemd-nspawn --pipe -q -M keydb /usr/local/bin/keydb-cli SADD apikeys "$COINOS_API_KEY" >/dev/null 2>&1 && \
+        echo "Registered API key '$COINOS_API_KEY' in CoinOS Redis apikeys set." || \
+        echo "WARNING: Failed to register API key in Redis. Add manually: keydb-cli SADD apikeys $COINOS_API_KEY"
+
+    # Enable CoinOS in relaycreator .env
+    sed -i 's/^COINOS_ENABLED=false/COINOS_ENABLED=true/' /srv/relaycreator/.env
+    sed -i "s/^COINOS_API_KEY=.*/COINOS_API_KEY=$COINOS_API_KEY/" /srv/relaycreator/.env
+
     echo ""
     echo "=== CoinOS deployed ==="
     echo "KeyDB: redis://127.0.0.1:6379"
     echo "CoinOS API: http://127.0.0.1:3119"
+    echo "API Key: $COINOS_API_KEY (registered in Redis apikeys set)"
     echo ""
-    echo "CoinOS is now available as a wallet backend for relay.tools."
-    echo "The admin panel in relay.tools will connect to http://127.0.0.1:3119"
+    echo "CoinOS is now available as a wallet backend."
+    echo "Users authenticate automatically via their Nostr extension (NIP-07)."
 fi
 
 echo "All done!"
