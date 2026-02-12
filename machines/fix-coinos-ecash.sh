@@ -83,6 +83,12 @@ export default {
   nostrKey: "${NSEC1}",
   nostrKey2: "${NSEC2}",
   mintUrl: "http://localhost:3338",
+  square: {
+    environment: "sandbox",
+    appId: "disabled",
+    url: "https://connect.squareupsandbox.com/",
+    scopes: [],
+  },
 };
 CFGEOF
 
@@ -117,12 +123,36 @@ export default {
 };
 RTEOF
 
-# ── Step 3: Ensure paths exist in the container filesystem ──
+# ── Step 3: Stub square module ──
+cat > /var/lib/machines/coinos/app/lib/square.ts << 'SQEOF'
+// square disabled
+export const squarePayment = async (_p: any, _user: any) => {};
+SQEOF
+
+cat > /var/lib/machines/coinos/app/routes/square.ts << 'SQREOF'
+// square routes disabled
+const disabled = (_req: any, res: any) => res.code(404).send({ error: "square disabled" });
+export default {
+  connect: disabled,
+  auth: disabled,
+  payment: disabled,
+};
+SQREOF
+
+# ── Step 4: Stub mqtt module ──
+cat > /var/lib/machines/coinos/app/lib/mqtt.ts << 'MQEOF'
+// mqtt disabled
+const noop = { connected: false, reconnect: () => {}, publish: () => {}, subscribe: () => {}, on: () => {} };
+export default noop;
+MQEOF
+
+# ── Step 5: Ensure paths exist in the container filesystem ──
 mkdir -p /var/lib/machines/coinos/home/bun
 ln -sf /app /var/lib/machines/coinos/home/bun/app 2>/dev/null || true
 mkdir -p /srv/coinos/uploads
+mkdir -p /var/lib/machines/coinos/home/bun/app/data/sockets
 
-# ── Step 4: Start coinos (already terminated in step 0) ──
+# ── Step 6: Start coinos (already terminated in step 0) ──
 machinectl start coinos
 sleep 5
 
