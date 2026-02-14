@@ -22,7 +22,16 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 
 	# Install Core Lightning v25.12.1 from pre-built Ubuntu 24.04 binary
 	# Ubuntu 24.04 glibc matches Debian trixie (13)
-	apt -y install xz-utils libsqlite3-0 libsodium23 libpq5 --no-install-suggests
+	apt -y install xz-utils libsqlite3-0 libsodium23 libpq5 python3-flask --no-install-suggests
+
+	# Install bitcoin-cli (needed by CLN's bcli plugin to talk to bitcoind)
+	KNOTS_VERSION="28.1.knots20250305"
+	cd /tmp
+	curl -L -o bitcoin-knots.tar.gz \
+		"https://bitcoinknots.org/files/28.x/\${KNOTS_VERSION}/bitcoin-\${KNOTS_VERSION}-x86_64-linux-gnu.tar.gz"
+	tar xf bitcoin-knots.tar.gz --strip-components=1 -C /usr/local "bitcoin-\${KNOTS_VERSION}/bin/bitcoin-cli"
+	rm -f /tmp/bitcoin-knots.tar.gz
+	bitcoin-cli --version || echo "WARNING: bitcoin-cli not found"
 	CLN_VERSION="25.12.1"
 	cd /tmp
 	curl -L -o "clightning-v\${CLN_VERSION}-Ubuntu-24.04-amd64.tar.xz" \
