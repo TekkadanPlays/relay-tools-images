@@ -3,9 +3,8 @@ Description=Core Lightning
 After=network.target
 
 [Service]
-Type=forking
-ExecStart=/bin/bash -c 'ulimit -l unlimited && exec /usr/local/bin/lightningd --conf=/home/lightning/.lightning/config --lightning-dir=/home/lightning/.lightning --daemon --log-file=/home/lightning/.lightning/bitcoin/cln.log'
-PIDFile=/home/lightning/.lightning/bitcoin/lightningd-bitcoin.pid
+Type=simple
+ExecStart=/bin/bash -c 'ulimit -l unlimited && exec /usr/local/bin/lightningd --conf=/home/lightning/.lightning/config --lightning-dir=/home/lightning/.lightning --log-file=/home/lightning/.lightning/bitcoin/cln.log'
 Restart=on-failure
 RestartSec=30
 TimeoutStopSec=300
