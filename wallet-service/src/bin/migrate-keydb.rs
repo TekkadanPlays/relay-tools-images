@@ -1,8 +1,7 @@
 use anyhow::Result;
 use rusqlite::Connection;
 use serde_json::Value;
-use std::collections::HashMap;
-use tracing::{info, error};
+use tracing::info;
 use tracing_subscriber;
 
 #[tokio::main]
@@ -157,9 +156,11 @@ fn migrate_users(conn: &Connection, keydb_json: &Value) -> Result<()> {
             if key.starts_with("user:") {
                 if let Ok(user_data) = serde_json::from_value::<Value>(value.clone()) {
                     if let Some(user_obj) = user_data.as_object() {
-                        let id = user_obj.get("id")
+                        let id_owned = user_obj.get("id")
                             .and_then(|v| v.as_str())
-                            .unwrap_or(&uuid::Uuid::new_v4().to_string());
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                        let id = id_owned.as_str();
                         
                         let username = user_obj.get("username")
                             .and_then(|v| v.as_str())
@@ -233,9 +234,11 @@ fn migrate_payments(conn: &Connection, keydb_json: &Value) -> Result<()> {
             if key.starts_with("payment:") {
                 if let Ok(payment_data) = serde_json::from_value::<Value>(value.clone()) {
                     if let Some(payment_obj) = payment_data.as_object() {
-                        let id = payment_obj.get("id")
+                        let id_owned = payment_obj.get("id")
                             .and_then(|v| v.as_str())
-                            .unwrap_or(&uuid::Uuid::new_v4().to_string());
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                        let id = id_owned.as_str();
                         
                         let user_id = payment_obj.get("user_id")
                             .and_then(|v| v.as_str())
@@ -307,27 +310,26 @@ fn migrate_invoices(conn: &Connection, keydb_json: &Value) -> Result<()> {
             if key.starts_with("invoice:") {
                 if let Ok(invoice_data) = serde_json::from_value::<Value>(value.clone()) {
                     if let Some(invoice_obj) = invoice_data.as_object() {
-                        let id = invoice_obj.get("id")
+                        let id_owned = invoice_obj.get("id")
                             .and_then(|v| v.as_str())
-                            .unwrap_or(&uuid::Uuid::new_v4().to_string());
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                        let id = id_owned.as_str();
                         
                         let user_id = invoice_obj.get("user_id")
                             .and_then(|v| v.as_str())
                             .unwrap_or("");
                         
-                        let hash = invoice_obj.get("hash")
+                        let hash_owned = invoice_obj.get("hash")
                             .and_then(|v| v.as_str())
-                            .unwrap_or(&id);
+                            .map(|s| s.to_string());
+                        let hash = hash_owned.as_deref().unwrap_or(id);
                         
                         let amount = invoice_obj.get("amount")
                             .and_then(|v| v.as_i64())
                             .unwrap_or(0);
                         
                         let memo = invoice_obj.get("memo")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string());
-                        
-                        let bolt11 = invoice_obj.get("bolt11")
                             .and_then(|v| v.as_str())
                             .map(|s| s.to_string());
                         

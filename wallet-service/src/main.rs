@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::net::SocketAddr;
-use tokio::net::TcpListener;
 use tracing::{info, error};
 use tracing_subscriber;
 
@@ -9,9 +8,12 @@ mod grpc_service;
 mod http_service;
 mod models;
 mod bitcoin;
+mod wallet_proto;
+
+pub use wallet_proto::wallet_grpc;
 
 use database::Database;
-use grpc_service::WalletService;
+use grpc_service::WalletGrpcService;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -24,7 +26,7 @@ async fn main() -> Result<()> {
 
     // Start gRPC server
     let grpc_addr = SocketAddr::from(([127, 0, 0, 1], 50051));
-    let grpc_service = WalletService::new(db.clone());
+    let grpc_service = WalletGrpcService::new(db.clone());
     let grpc_server = tonic::transport::Server::builder()
         .add_service(wallet_grpc::WalletServiceServer::new(grpc_service))
         .serve(grpc_addr);

@@ -4,7 +4,7 @@ use tonic::{Request, Response, Status};
 
 use crate::database::Database;
 use crate::models::{User, Payment, Invoice};
-use wallet_grpc::{
+use crate::wallet_grpc::{
     wallet_service_server::WalletService,
     GetUserRequest, GetUserResponse,
     CreatePaymentRequest, CreatePaymentResponse,
@@ -13,11 +13,11 @@ use wallet_grpc::{
     BalanceRequest, BalanceResponse,
 };
 
-pub struct WalletService {
+pub struct WalletGrpcService {
     db: Arc<Database>,
 }
 
-impl WalletService {
+impl WalletGrpcService {
     pub fn new(db: Arc<Database>) -> Self {
         Self { db }
     }
@@ -66,7 +66,7 @@ impl WalletService {
 }
 
 #[tonic::async_trait]
-impl WalletService for WalletService {
+impl WalletService for WalletGrpcService {
     async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<GetUserResponse>, Status> {
         let req = request.into_inner();
         
