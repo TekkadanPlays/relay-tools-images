@@ -21,20 +21,19 @@ else
     echo "bitcoin-cli NOT found. Installing..."
     nsenter -t "$PID" -m -u -i -n -p -- bash -c '
         cd /tmp
-        # Try Bitcoin Knots first, fall back to Bitcoin Core
-        KNOTS_VERSION="28.1.knots20250305"
+        # Download Bitcoin Core (simpler, well-known tarball structure)
         curl -L -o bitcoin.tar.gz \
-            "https://bitcoinknots.org/files/28.x/${KNOTS_VERSION}/bitcoin-${KNOTS_VERSION}-x86_64-linux-gnu.tar.gz" 2>/dev/null || \
-        curl -L -o bitcoin.tar.gz \
-            "https://bitcoincore.org/bin/bitcoin-core-28.0/bitcoin-28.0-x86_64-linux-gnu.tar.gz" 2>/dev/null
+            "https://bitcoincore.org/bin/bitcoin-core-28.0/bitcoin-28.0-x86_64-linux-gnu.tar.gz"
         
-        # Extract just bitcoin-cli
-        tar xf bitcoin.tar.gz --wildcards "*/bin/bitcoin-cli" --strip-components=1 -C /usr/local 2>/dev/null || \
-        tar xf bitcoin.tar.gz -C /usr/local --strip-components=1
-        rm -f /tmp/bitcoin.tar.gz /tmp/bitcoin-*.tar.gz
+        # Extract, find bitcoin-cli, copy to /usr/local/bin
+        mkdir -p /tmp/btc-extract
+        tar xf bitcoin.tar.gz -C /tmp/btc-extract
+        find /tmp/btc-extract -name bitcoin-cli -exec cp {} /usr/local/bin/bitcoin-cli \;
+        chmod +x /usr/local/bin/bitcoin-cli
+        rm -rf /tmp/bitcoin.tar.gz /tmp/btc-extract
         
         echo "Installed:"
-        bitcoin-cli --version
+        /usr/local/bin/bitcoin-cli --version
     '
 fi
 
