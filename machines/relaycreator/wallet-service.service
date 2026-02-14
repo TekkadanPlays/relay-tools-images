@@ -1,0 +1,19 @@
+[Unit]
+Description=Wallet Service (Rust + Rusqlite)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/wallet-service
+WorkingDirectory=/app/data
+Restart=on-failure
+RestartSec=10
+Environment=RUST_LOG=info
+Environment=WALLET_DB_PATH=/app/data/wallet.db
+
+# Create data directory if it doesn't exist
+ExecStartPre=/bin/mkdir -p /app/data
+
+[Install]
+WantedBy=multi-user.target

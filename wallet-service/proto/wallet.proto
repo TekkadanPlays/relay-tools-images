@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package wallet;
+
+// User information
+message User {
+    string id = 1;
+    string username = 2;
+    string pubkey = 3;
+    string npub = 4;
+    int64 balance = 5;
+    string currency = 6;
+    string display = 7;
+    string picture = 8;
+    string about = 9;
+    bool verified = 10;
+    int64 created = 11;
+}
+
+// Payment information
+message Payment {
+    string id = 1;
+    int64 amount = 2;
+    int64 fee = 3;
+    string memo = 4;
+    string hash = 5;
+    string type = 6;
+    int64 created = 7;
+    bool confirmed = 8;
+    User user = 9;
+}
+
+// Invoice information
+message Invoice {
+    string id = 1;
+    string hash = 2;
+    int64 amount = 3;
+    string memo = 4;
+    string bolt11 = 5;
+    int64 created = 6;
+    bool paid = 7;
+}
+
+// Account (sub-wallet)
+message Account {
+    string id = 1;
+    string name = 2;
+    string type = 3;
+    string uid = 4;
+    int64 balance = 5;
+}
+
+// Request/Response messages
+message GetUserRequest {
+    string id = 1;
+    string username = 2;
+    string pubkey = 3;
+}
+
+message GetUserResponse {
+    User user = 1;
+}
+
+message CreatePaymentRequest {
+    string user_id = 1;
+    int64 amount = 2;
+    string payreq = 3;
+    string memo = 4;
+    int64 fee = 5;
+}
+
+message CreatePaymentResponse {
+    Payment payment = 1;
+}
+
+message ListPaymentsRequest {
+    string user_id = 1;
+    int32 limit = 2;
+    int32 offset = 3;
+    string account_id = 4;
+}
+
+message ListPaymentsResponse {
+    repeated Payment payments = 1;
+    int32 total = 2;
+}
+
+message CreateInvoiceRequest {
+    string user_id = 1;
+    int64 amount = 2;
+    string memo = 3;
+    string type = 4;
+}
+
+message CreateInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message BalanceRequest {
+    string user_id = 1;
+    string account_id = 2;
+}
+
+message BalanceResponse {
+    int64 balance = 1;
+}
+
+// Service definition
+service WalletService {
+    rpc GetUser(GetUserRequest) returns (GetUserResponse);
+    rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+    rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+    rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
+    rpc GetBalance(BalanceRequest) returns (BalanceResponse);
+}

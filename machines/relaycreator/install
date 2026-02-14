@@ -11,11 +11,14 @@ mkdir -p /srv/relaycreator
 cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
 sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
 cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
+cp $SD/wallet-service.service /var/lib/machines/$APP/lib/systemd/system/wallet-service.service
 cp $SD/deploy.service /var/lib/machines/$APP/lib/systemd/system/deploy.service
 cp $SD/deploy.timer /var/lib/machines/$APP/lib/systemd/system/deploy.timer
 cp $SD/deploy.sh /var/lib/machines/$APP/usr/local/bin/deploy.sh
 # Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
 sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/wallet-service.service
 sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/deploy.service
 sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/deploy.timer
 sed -i 's/\r$//' /var/lib/machines/$APP/usr/local/bin/deploy.sh
@@ -24,9 +27,14 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	echo -e "$PASSWORD\n$PASSWORD" | passwd
 	echo "$APP">/etc/hostname
 	apt update
-	apt -y install git curl build-essential
+	apt -y install git curl build-essential pkg-config libssl-dev
 	curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 	apt -y install nodejs
+	
+	# Install Rust
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+	source ~/.cargo/env
+	
 	cd /app
 	git clone https://github.com/TekkadanPlays/relaycreator.git /app
 	npm install -g pnpm@9
@@ -45,8 +53,17 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	# Build API server (TypeScript -> JS)
 	cd /app/api-server
 	npx tsc
+	
+	# Build Rust wallet service
+	cd /app
+	git clone https://github.com/TekkadanPlays/relay-tools-images.git /tmp/relay-tools
+	cp -r /tmp/relay-tools/wallet-service /app/wallet-service
+	cd /app/wallet-service
+	~/.cargo/bin/cargo build --release
+	install -m 0755 target/release/wallet-service /usr/local/bin/
 
 	systemctl enable app
+	systemctl enable wallet-service
 	systemctl enable deploy.timer
 EOF
 systemctl stop systemd-nspawn@$APP
