@@ -135,6 +135,7 @@ RSTATE_URL=http://127.0.0.1:3100
 EOF
     # rstate .env — NIP-66 relay discovery API
     mkdir -p /srv/ribbit/rstate
+    RSTATE_NSEC_HEX=$(openssl rand -hex 32)
     cat << EOF > /srv/ribbit/rstate/.env
 NODE_ENV=production
 REST_ENABLED=true
@@ -143,6 +144,8 @@ REST_HOST=127.0.0.1
 REST_CORS_ORIGINS=https://$MYDOMAIN
 INGEST_RELAYS=wss://history.nostr.watch,wss://relay.nostr.watch
 CVM_RELAYS=wss://relay.damus.io,wss://relay.nostr.band
+CVM_SERVER_NSEC=$RSTATE_NSEC_HEX
+CVM_ENCRYPTION_MODE=DISABLED
 LOG_LEVEL=info
 CACHE_TTL=300
 EOF
