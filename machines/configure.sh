@@ -115,6 +115,27 @@ EOF
 # Launch relaycreator
 machinectl start relaycreator
 
+# ─── OPTIONAL: Ribbit frontend (Bun/Hono) ───
+# Set RIBBIT_ENABLED=true in .env to serve ribbit.network as the public frontend
+# while relaycreator handles API + admin panel behind HAProxy.
+if [ "${RIBBIT_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up ribbit.network frontend ==="
+    if [ -z "$MYDOMAIN" ]; then
+        echo "ERROR: MYDOMAIN is empty — cannot configure ribbit frontend."
+        echo "Set MYDOMAIN in .env or environment before running configure.sh"
+        exit 1
+    fi
+    mkdir -p /srv/ribbit/ribbit
+    cat << EOF > /srv/ribbit/ribbit/.env
+PORT=3000
+NODE_ENV=production
+CREATOR_DOMAIN=$MYDOMAIN
+API_BASE_URL=https://$MYDOMAIN
+EOF
+    machinectl start ribbit
+    echo "ribbit.network frontend started on port 3000"
+fi
+
 # Configure haproxy management daemon (cookiecutter)
 cat << EOF > /srv/haproxy/.cookiecutter.env
 BASE_URL=https://$MYDOMAIN

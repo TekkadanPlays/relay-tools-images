@@ -1,0 +1,42 @@
+#!/bin/bash
+
+deploy_app() {
+    echo "detected upstream changes, deploying"
+    git pull
+    systemctl stop app
+
+    # Rebuild the frontend
+    cd /app/ribbit
+    bun install
+    NODE_ENV=production bun run build
+
+    cd /app
+    systemctl start app
+}
+
+cd /app
+
+# Ensure remote points to the correct repo
+EXPECTED_REMOTE="https://github.com/TekkadanPlays/ribbit.network.git"
+CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null)
+if [ "$CURRENT_REMOTE" != "$EXPECTED_REMOTE" ]; then
+    echo "Updating git remote from $CURRENT_REMOTE to $EXPECTED_REMOTE"
+    git remote set-url origin "$EXPECTED_REMOTE"
+fi
+
+git remote update 2>/dev/null || true
+
+if [ ! -f "/firstrun.txt" ]; then
+    echo "First run: building app"
+    cd /app/ribbit
+    NODE_ENV=production bun run build
+    cd /app
+    touch /firstrun.txt
+    systemctl restart app
+    exit 0
+fi
+
+if git status -uno 2>/dev/null | grep -q "is behind"
+then
+    deploy_app
+fi
