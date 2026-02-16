@@ -131,9 +131,24 @@ PORT=3000
 NODE_ENV=production
 CREATOR_DOMAIN=$MYDOMAIN
 API_BASE_URL=https://$MYDOMAIN
+RSTATE_URL=http://127.0.0.1:3100
+EOF
+    # rstate .env — NIP-66 relay discovery API
+    mkdir -p /srv/ribbit/rstate
+    cat << EOF > /srv/ribbit/rstate/.env
+NODE_ENV=production
+REST_ENABLED=true
+REST_PORT=3100
+REST_HOST=127.0.0.1
+REST_CORS_ORIGINS=https://$MYDOMAIN
+INGEST_RELAYS=wss://history.nostr.watch,wss://relay.nostr.watch
+CVM_RELAYS=wss://relay.damus.io,wss://relay.nostr.band
+LOG_LEVEL=info
+CACHE_TTL=300
 EOF
     machinectl start ribbit
     echo "ribbit.network frontend started on port 3000"
+    echo "rstate relay discovery API configured on port 3100"
 fi
 
 # Configure haproxy management daemon (cookiecutter)

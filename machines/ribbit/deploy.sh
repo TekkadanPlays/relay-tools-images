@@ -14,6 +14,24 @@ deploy_app() {
     systemctl start app
 }
 
+deploy_rstate() {
+    echo "updating rstate relay discovery API"
+    systemctl stop rstate 2>/dev/null || true
+
+    cd /app/nostr-watch
+    git pull 2>/dev/null || true
+    cd /app/nostr-watch/apps/rstate
+    npm install
+    npm run build
+    mkdir -p /app/rstate
+    cp -r dist/* /app/rstate/
+    cp package.json /app/rstate/
+    cd /app/rstate
+    npm install --omit=dev
+
+    systemctl start rstate
+}
+
 cd /app
 
 # Ensure remote points to the correct repo
@@ -31,6 +49,7 @@ if [ ! -f "/firstrun.txt" ]; then
     cd /app/ribbit
     NODE_ENV=production bun run build
     cd /app
+    deploy_rstate
     touch /firstrun.txt
     systemctl restart app
     exit 0
@@ -39,4 +58,13 @@ fi
 if git status -uno 2>/dev/null | grep -q "is behind"
 then
     deploy_app
+fi
+
+# Check for rstate updates independently
+if [ -d "/app/nostr-watch/.git" ]; then
+    cd /app/nostr-watch
+    git remote update 2>/dev/null || true
+    if git status -uno 2>/dev/null | grep -q "is behind"; then
+        deploy_rstate
+    fi
 fi

@@ -1,0 +1,18 @@
+[Unit]
+Description=rstate relay discovery API
+After=network.target
+Wants=network.target
+
+[Service]
+ExecStart=/usr/bin/node /app/rstate/dist/index.js
+WorkingDirectory=/app/rstate
+Restart=always
+User=root
+EnvironmentFile=/app/rstate/.env
+Environment=NODE_ENV=production
+Type=simple
+TimeoutStopSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
