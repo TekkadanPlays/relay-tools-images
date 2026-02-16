@@ -4,7 +4,7 @@ After=network.target
 Wants=network.target
 
 [Service]
-ExecStart=/usr/bin/node /app/rstate/dist/index.js
+ExecStart=/usr/local/bin/bun run /app/rstate/dist/index.js
 WorkingDirectory=/app/rstate
 Restart=always
 User=root

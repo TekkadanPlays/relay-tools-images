@@ -21,13 +21,13 @@ deploy_rstate() {
     cd /app/nostr-watch
     git pull 2>/dev/null || true
     cd /app/nostr-watch/apps/rstate
-    npm install
-    npm run build
+    bun install
+    bun run build
     mkdir -p /app/rstate
     cp -r dist/* /app/rstate/
     cp package.json /app/rstate/
     cd /app/rstate
-    npm install --omit=dev
+    bun install --production
 
     systemctl start rstate
 }
