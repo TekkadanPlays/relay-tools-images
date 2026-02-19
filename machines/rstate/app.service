@@ -8,7 +8,7 @@ ExecStart=/usr/local/bin/bun run /app/rstate/index.js
 WorkingDirectory=/app/rstate
 Restart=always
 User=root
-EnvironmentFile=/app/rstate/.env
+EnvironmentFile=/app/.env
 Environment=NODE_ENV=production
 Type=simple
 TimeoutStopSec=5

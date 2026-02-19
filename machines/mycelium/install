@@ -28,12 +28,8 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	curl -fsSL https://bun.sh/install | bash
 	ln -sf /root/.bun/bin/bun /usr/local/bin/bun
 	ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx
-	# Clone the website repo and install deps
-	git clone https://github.com/TekkadanPlays/ribbit.network.git /app
-	cd /app/ribbit
-	bun install
-	# Build the frontend
-	NODE_ENV=production bun run build
+	# Note: repo clone + build happens on first boot via deploy.timer
+	# because /app is bind-mounted from /srv/mycelium at runtime (install-time /app is hidden)
 	systemctl enable app
 	systemctl enable deploy.timer
 EOF

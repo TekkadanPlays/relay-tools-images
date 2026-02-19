@@ -28,16 +28,8 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	curl -fsSL https://bun.sh/install | bash
 	ln -sf /root/.bun/bin/bun /usr/local/bin/bun
 	ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx
-	# Clone nostr-watch and build rstate
-	git clone https://github.com/sandwichfarm/nostr-watch.git /app/nostr-watch
-	cd /app/nostr-watch/apps/rstate
-	bun install
-	bun run build
-	mkdir -p /app/rstate
-	cp -r dist/* /app/rstate/
-	cp package.json /app/rstate/
-	cd /app/rstate
-	bun install --production
+	# Note: nostr-watch clone + rstate build happens on first boot via deploy.timer
+	# because /app is bind-mounted from /srv/rstate at runtime (install-time /app is hidden)
 	systemctl enable app
 	systemctl enable deploy.timer
 EOF

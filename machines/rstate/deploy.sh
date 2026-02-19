@@ -21,7 +21,11 @@ deploy_rstate() {
 cd /app
 
 if [ ! -f "/firstrun.txt" ]; then
-    echo "First run: building rstate"
+    echo "First run: cloning and building rstate"
+    # Clone nostr-watch onto the bind mount (first time only)
+    if [ ! -d "/app/nostr-watch" ]; then
+        git clone https://github.com/sandwichfarm/nostr-watch.git /app/nostr-watch
+    fi
     deploy_rstate
     touch /firstrun.txt
     exit 0

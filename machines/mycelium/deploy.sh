@@ -27,8 +27,15 @@ fi
 git remote update 2>/dev/null || true
 
 if [ ! -f "/firstrun.txt" ]; then
-    echo "First run: building app"
+    echo "First run: cloning and building app"
+    # Clone repo onto the bind mount (first time only)
+    if [ ! -d "/app/ribbit" ]; then
+        git clone https://github.com/TekkadanPlays/ribbit.network.git /app/repo-tmp
+        mv /app/repo-tmp/* /app/repo-tmp/.* /app/ 2>/dev/null || true
+        rm -rf /app/repo-tmp
+    fi
     cd /app/ribbit
+    bun install
     NODE_ENV=production bun run build
     cd /app
     touch /firstrun.txt
