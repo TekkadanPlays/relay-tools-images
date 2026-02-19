@@ -7,11 +7,11 @@ ensure_kaji() {
     if [ ! -d "$KAJI_DIR/.git" ]; then
         echo "Cloning kaji library..."
         git clone "$KAJI_REMOTE" "$KAJI_DIR"
-        cd "$KAJI_DIR" && bun install && cd /app
+        cd "$KAJI_DIR" && pnpm install && cd /app
     else
         cd "$KAJI_DIR"
         git pull origin main 2>/dev/null || true
-        bun install 2>/dev/null || true
+        pnpm install 2>/dev/null || true
         cd /app
     fi
     # tsconfig paths reference ../../relay-tools-images/kaji from /app/web
@@ -34,10 +34,10 @@ deploy_app() {
     npx prisma db push --accept-data-loss 2>/dev/null || true
     npm run build
 
-    # Build Inferno SPA (uses bun)
+    # Build Inferno SPA
     cd /app/web
-    bun install
-    bun run build
+    pnpm install
+    npx vite build
 
     cd /app
     systemctl start app
