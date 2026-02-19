@@ -24,28 +24,16 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	echo -e "$PASSWORD\n$PASSWORD" | passwd
 	echo "$APP">/etc/hostname
 	apt update
-	apt -y install git curl build-essential
+	apt -y install git curl build-essential unzip
 	curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 	apt -y install nodejs
-	cd /app
-	git clone https://github.com/TekkadanPlays/relaycreator.git /app
-	npm install -g pnpm@9
+	# Install Bun (needed for web frontend build)
+	curl -fsSL https://bun.sh/install | bash
+	ln -sf /root/.bun/bin/bun /usr/local/bin/bun
+	ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx
 	npm install -g prisma
-
-	# Build Express API server
-	cd /app/api-server
-	pnpm install
-	npx prisma generate
-
-	# Build React SPA
-	cd /app/web
-	pnpm install
-	npx vite build
-
-	# Build API server (TypeScript -> JS)
-	cd /app/api-server
-	npx tsc
-
+	# Note: repo clone + build happens on first boot via deploy.timer
+	# because /app is bind-mounted from /srv/relaycreator at runtime
 	systemctl enable app
 	systemctl enable deploy.timer
 EOF
