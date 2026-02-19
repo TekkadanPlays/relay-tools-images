@@ -7,6 +7,7 @@ ExecStart=/usr/local/bin/bun run /app/src/server.tsx
 WorkingDirectory=/app
 Restart=always
 User=root
+Environment=NODE_ENV=production
 Type=simple
 TimeoutStopSec=5
 KillMode=process

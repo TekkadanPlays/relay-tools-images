@@ -1,0 +1,9 @@
+[Unit]
+Description=Deploy hyphae IRC client
+
+[Timer]
+# run checks once a minute
+OnCalendar=*-*-* *:*:05
+
+[Install]
+WantedBy=timers.target
