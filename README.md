@@ -217,19 +217,33 @@ systemctl start app
 | Edit config (host-side) | `nano /srv/<name>/.env` |
 | Restart service | `machinectl shell <name> /bin/bash -c 'systemctl restart <unit>'` |
 
-### ribbit container services
+### ribbit container services (legacy)
 
 | Unit | Logs | Test |
 |---|---|---|
 | `app.service` | `journalctl -u app` | `curl http://127.0.0.1:3000/api/health` |
 | `rstate.service` | `journalctl -u rstate` | `curl http://127.0.0.1:3100/health/ping` |
 
+### mycelium container services
+
+| Unit | Logs | Test |
+|---|---|---|
+| `app.service` | `journalctl -u app` | `curl http://127.0.0.1:3000/api/health` |
+
+### rstate container services (standalone)
+
+| Unit | Logs | Test |
+|---|---|---|
+| `app.service` | `journalctl -u app` | `curl http://127.0.0.1:3100/health/ping` |
+
 ### Key file locations (host-side)
 
 | Path | Contents |
 |---|---|
-| `/srv/ribbit/ribbit/.env` | Hono server config (PORT, RSTATE_URL) |
-| `/srv/ribbit/rstate/.env` | rstate config (REST_PORT, CVM_SERVER_NSEC, ingest relays) |
+| `/srv/mycelium/ribbit/.env` | Mycelium Hono server config (PORT, CREATOR_DOMAIN) |
+| `/srv/rstate/.env` | rstate config (REST_PORT, CVM_SERVER_NSEC, ingest relays) |
+| `/srv/ribbit/ribbit/.env` | Legacy ribbit Hono server config (PORT, RSTATE_URL) |
+| `/srv/ribbit/rstate/.env` | Legacy rstate config (inside ribbit container) |
 | `/srv/relaycreator/.env` | Express API config (DATABASE_URL, JWT, payments) |
 | `/srv/haproxy/certs/bundle.pem` | TLS certificate |
 | `/srv/mysql/.creator-mysql-uri.txt` | MySQL connection string |
@@ -243,7 +257,7 @@ rstate is a relay state aggregation engine from the [nostr-watch](https://github
 3. Aggregates relay state (software, NIPs, RTT, geo, uptime)
 4. Serves a REST API for relay discovery and search
 
-### rstate REST API (via `/relays/*` proxy)
+### rstate REST API (direct via HAProxy `/relays/*`)
 
 | Endpoint | Method | Description |
 |---|---|---|
@@ -287,6 +301,10 @@ rstate is a relay state aggregation engine from the [nostr-watch](https://github
 - [x] RIBBIT_ENABLED flag in configure.sh
 - [x] rstate NIP-66 relay discovery integration (Bun runtime)
 - [x] Auto-generate CVM_SERVER_NSEC in configure.sh
+- [x] Add mycelium machine (successor to ribbit, no rstate sidecar)
+- [x] Add standalone rstate machine (extracted from ribbit)
+- [x] MYCELIUM_ENABLED + RSTATE_ENABLED flags in configure.sh
+- [x] HAProxy: mycelium → ribbit fallback, direct rstate routing
 - [ ] Migrate relaycreator frontend to InfernoJS + BlazeCSS
-- [ ] Add mycelium.social as second ribbit deployment
+- [ ] Remove legacy ribbit container after migration verified
 - [ ] Evaluate relaymon for independent RTT monitoring

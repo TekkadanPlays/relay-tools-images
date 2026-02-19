@@ -154,6 +154,58 @@ EOF
     echo "rstate relay discovery API configured on port 3100"
 fi
 
+# ─── OPTIONAL: Mycelium frontend (Bun/Hono) ───
+# Set MYCELIUM_ENABLED=true in .env to serve mycelium.social as the public frontend.
+# This is the successor to RIBBIT_ENABLED — use one or the other, not both.
+# rstate runs in its own container (see RSTATE_ENABLED below).
+if [ "${MYCELIUM_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up mycelium.social frontend ==="
+    if [ -z "$MYDOMAIN" ]; then
+        echo "ERROR: MYDOMAIN is empty — cannot configure mycelium frontend."
+        echo "Set MYDOMAIN in .env or environment before running configure.sh"
+        exit 1
+    fi
+    mkdir -p /srv/mycelium/ribbit
+    cat << EOF > /srv/mycelium/ribbit/.env
+PORT=3000
+NODE_ENV=production
+CREATOR_DOMAIN=$MYDOMAIN
+API_BASE_URL=https://$MYDOMAIN
+EOF
+    machinectl start mycelium
+    echo "mycelium.social frontend started on port 3000"
+fi
+
+# ─── OPTIONAL: rstate standalone (NIP-66 relay discovery) ───
+# Set RSTATE_ENABLED=true in .env to run rstate as its own container.
+# Used with MYCELIUM_ENABLED (mycelium no longer bundles rstate).
+# Also works standalone if you just want the relay discovery API.
+if [ "${RSTATE_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up rstate relay discovery API ==="
+    if [ -z "$MYDOMAIN" ]; then
+        echo "ERROR: MYDOMAIN is empty — cannot configure rstate."
+        echo "Set MYDOMAIN in .env or environment before running configure.sh"
+        exit 1
+    fi
+    mkdir -p /srv/rstate
+    RSTATE_NSEC_HEX=$(openssl rand -hex 32)
+    cat << EOF > /srv/rstate/.env
+NODE_ENV=production
+REST_ENABLED=true
+REST_PORT=3100
+REST_HOST=127.0.0.1
+REST_CORS_ORIGINS=https://$MYDOMAIN
+INGEST_RELAYS=wss://history.nostr.watch,wss://relay.nostr.watch
+CVM_RELAYS=wss://relay.damus.io,wss://relay.nostr.band
+CVM_SERVER_NSEC=$RSTATE_NSEC_HEX
+CVM_ENCRYPTION_MODE=DISABLED
+LOG_LEVEL=info
+CACHE_TTL=300
+EOF
+    machinectl start rstate
+    echo "rstate relay discovery API started on port 3100"
+fi
+
 # Configure haproxy management daemon (cookiecutter)
 cat << EOF > /srv/haproxy/.cookiecutter.env
 BASE_URL=https://$MYDOMAIN
