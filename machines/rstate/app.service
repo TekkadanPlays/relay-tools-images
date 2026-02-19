@@ -1,0 +1,18 @@
+[Unit]
+Description=rstate NIP-66 relay discovery API
+After=network.target
+Wants=network.target
+
+[Service]
+ExecStart=/usr/local/bin/bun run /app/rstate/index.js
+WorkingDirectory=/app/rstate
+Restart=always
+User=root
+EnvironmentFile=/app/rstate/.env
+Environment=NODE_ENV=production
+Type=simple
+TimeoutStopSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

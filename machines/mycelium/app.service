@@ -1,0 +1,17 @@
+[Unit]
+Description=mycelium.social frontend
+Wants=network.target
+
+[Service]
+ExecStart=/usr/local/bin/bun run /app/ribbit/src/server/index.ts
+WorkingDirectory=/app/ribbit
+Restart=always
+User=root
+EnvironmentFile=/app/ribbit/.env
+Environment=NODE_ENV=production
+Type=simple
+TimeoutStopSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

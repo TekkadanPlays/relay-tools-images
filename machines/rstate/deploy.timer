@@ -1,0 +1,9 @@
+[Unit]
+Description=Deploy rstate
+
+[Timer]
+# run checks once a minute
+OnCalendar=*-*-* *:*:35
+
+[Install]
+WantedBy=timers.target

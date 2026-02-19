@@ -1,0 +1,11 @@
+[Unit]
+Description=rstate deployment
+
+[Service]
+ExecStart=/usr/local/bin/deploy.sh
+WorkingDirectory=/app
+User=root
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
