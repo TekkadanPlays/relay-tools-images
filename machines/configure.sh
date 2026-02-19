@@ -53,9 +53,9 @@ systemd-nspawn --pipe -M keys-certs-manager /bin/bash << EOF
     mkdir -p /etc/haproxy/certs
 
     if [ -z "$MYEMAIL" ]; then
-        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" -d "$MYDOMAIN" --agree-tos --register-unsafely-without-email --standalone --preferred-challenges http --non-interactive
+        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" -d "$MYDOMAIN" -d "app.$MYDOMAIN" --agree-tos --register-unsafely-without-email --standalone --preferred-challenges http --non-interactive
     else 
-        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" -d "$MYDOMAIN" --agree-tos -m "$MYEMAIL" --standalone --preferred-challenges http --non-interactive
+        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" -d "$MYDOMAIN" -d "app.$MYDOMAIN" --agree-tos -m "$MYEMAIL" --standalone --preferred-challenges http --non-interactive
     fi
 
     # haproxy needs one file (write to bind mount so haproxy container can see it)
@@ -93,7 +93,7 @@ cat << EOF > /srv/relaycreator/.env
 DATABASE_URL=$DATABASE_URL
 JWT_SECRET=$JWT_SECRET
 PORT=4000
-CORS_ORIGIN=https://$MYDOMAIN
+CORS_ORIGIN=https://$MYDOMAIN,https://app.$MYDOMAIN
 DEPLOY_PUBKEY=$NOSTR_PUBLIC_KEY
 CREATOR_DOMAIN=$MYDOMAIN
 INVOICE_AMOUNT=21
@@ -169,8 +169,8 @@ if [ "${MYCELIUM_ENABLED:-false}" = "true" ]; then
     cat << EOF > /srv/mycelium/ribbit/.env
 PORT=3000
 NODE_ENV=production
-CREATOR_DOMAIN=$MYDOMAIN
-API_BASE_URL=https://$MYDOMAIN
+CREATOR_DOMAIN=app.$MYDOMAIN
+API_BASE_URL=https://app.$MYDOMAIN
 EOF
     machinectl start mycelium
     echo "mycelium.social frontend started on port 3000"
