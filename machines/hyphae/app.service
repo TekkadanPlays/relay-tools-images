@@ -1,0 +1,15 @@
+[Unit]
+Description=Hyphae IRC web client
+Wants=network.target
+
+[Service]
+ExecStart=/usr/local/bin/bun run /app/src/server.tsx
+WorkingDirectory=/app
+Restart=always
+User=root
+Type=simple
+TimeoutStopSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

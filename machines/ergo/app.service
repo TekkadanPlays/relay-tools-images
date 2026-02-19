@@ -1,0 +1,15 @@
+[Unit]
+Description=Ergo IRC server
+Wants=network.target
+
+[Service]
+ExecStart=/usr/local/bin/ergo run --conf /data/ircd.yaml
+WorkingDirectory=/data
+Restart=always
+User=root
+Type=simple
+TimeoutStopSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
