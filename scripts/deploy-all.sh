@@ -29,7 +29,7 @@ echo ""
 echo "--- 5. Rebuild Oni (if running) ---"
 if machinectl show oni &>/dev/null; then
     PID=$(machinectl show oni -p Leader --value)
-    nsenter -t "$PID" -m -u -i -n -p -- bash /usr/local/bin/deploy.sh
+    nsenter -t "$PID" -m -u -i -n -p -- bash /usr/local/bin/deploy.sh --force
 else
     echo "Oni container not running, skipping."
 fi

@@ -5,9 +5,14 @@ export PATH=/usr/local/go/bin:/usr/local/bin:$PATH
 mkdir -p /app/tmp
 git config --global --add safe.directory /app 2>/dev/null
 
+FORCE=0
+if [ "${1:-}" = "--force" ]; then
+    FORCE=1
+fi
+
 deploy_app() {
-    echo "detected upstream changes, deploying"
-    git pull
+    echo "deploying oni..."
+    git pull origin main
     systemctl stop app
 
     # Rebuild Go binary
@@ -23,6 +28,7 @@ deploy_app() {
     cd /app
 
     systemctl start app
+    echo "→ Oni deploy complete"
 }
 
 cd /app
@@ -35,7 +41,7 @@ if [ "$CURRENT_REMOTE" != "$EXPECTED_REMOTE" ]; then
     git remote set-url origin "$EXPECTED_REMOTE"
 fi
 
-git remote update 2>/dev/null || true
+git fetch origin 2>/dev/null || true
 
 if [ ! -f "/firstrun.txt" ]; then
     echo "First run: cloning and building app"
@@ -57,7 +63,15 @@ if [ ! -f "/firstrun.txt" ]; then
     exit 0
 fi
 
-if git status -uno 2>/dev/null | grep -q "is behind"
-then
+if [ "$FORCE" = "1" ]; then
+    echo "forced rebuild requested"
+    deploy_app
+    exit 0
+fi
+
+LOCAL=$(git rev-parse HEAD 2>/dev/null)
+REMOTE=$(git rev-parse origin/main 2>/dev/null)
+if [ "$LOCAL" != "$REMOTE" ]; then
+    echo "detected upstream changes ($LOCAL -> $REMOTE)"
     deploy_app
 fi
