@@ -26,7 +26,16 @@ echo "--- 4. Rebuild Relaycreator ---"
 bash "$SCRIPT_DIR/relaycreator-rebuild.sh"
 
 echo ""
-echo "--- 5. Final Status ---"
+echo "--- 5. Rebuild Oni (if running) ---"
+if machinectl show oni &>/dev/null; then
+    PID=$(machinectl show oni -p Leader --value)
+    nsenter -t "$PID" -m -u -i -n -p -- bash /usr/local/bin/deploy.sh
+else
+    echo "Oni container not running, skipping."
+fi
+
+echo ""
+echo "--- 6. Final Status ---"
 bash "$SCRIPT_DIR/status.sh"
 
 echo ""

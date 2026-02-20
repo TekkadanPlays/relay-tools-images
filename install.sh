@@ -155,6 +155,17 @@ if [ "$INSTALL_RIBBIT" = false ] && [ "$INSTALL_MYCELIUM" = false ]; then
     echo "  No frontend selected. Relaycreator will serve all traffic."
 fi
 
+# Extras
+echo ""
+echo -e "${CYAN}EXTRAS (optional):${NC}"
+
+INSTALL_ONI=false
+
+if confirm "Install Oni live streaming server?" "n"; then
+    INSTALL_ONI=true
+    print_service "on" "oni" "Oni — Owncast-based live streaming (Go + InfernoJS)"
+fi
+
 # Payments
 echo ""
 echo -e "${YELLOW}PAYMENTS (optional):${NC}"
@@ -184,6 +195,7 @@ SERVICES=("mysql" "strfry" "haproxy" "relaycreator" "keys-certs-manager")
 [ "$INSTALL_RIBBIT" = true ] && SERVICES+=("ribbit")
 [ "$INSTALL_MYCELIUM" = true ] && SERVICES+=("mycelium")
 [ "$INSTALL_RSTATE" = true ] && SERVICES+=("rstate")
+[ "$INSTALL_ONI" = true ] && SERVICES+=("oni")
 [ "$INSTALL_PAYMENTS" = true ] && SERVICES+=("bitcoinknots" "cln" "lnbits")
 [ "$INSTALL_COINOS" = true ] && SERVICES+=("keydb" "coinos")
 
@@ -205,6 +217,7 @@ $([ -n "$SELF_SIGNED" ] && echo "SELF_SIGNED=$SELF_SIGNED")
 RIBBIT_ENABLED=$INSTALL_RIBBIT
 MYCELIUM_ENABLED=$INSTALL_MYCELIUM
 RSTATE_ENABLED=$INSTALL_RSTATE
+ONI_ENABLED=$INSTALL_ONI
 PAYMENTS_ENABLED=$INSTALL_PAYMENTS
 COINOS_ENABLED=$INSTALL_COINOS
 EOF
@@ -251,6 +264,7 @@ mkdir -p /srv/strfry /srv/haproxy /srv/mysql /srv/relaycreator
 [ "$INSTALL_RIBBIT" = true ] && mkdir -p /srv/ribbit
 [ "$INSTALL_MYCELIUM" = true ] && mkdir -p /srv/mycelium
 [ "$INSTALL_RSTATE" = true ] && mkdir -p /srv/rstate
+[ "$INSTALL_ONI" = true ] && mkdir -p /srv/oni
 
 # Strip CRLF from all scripts (Windows clone protection)
 find "$MACHINES_DIR" -type f \( -name "*.sh" -o -name "*.service" -o -name "*.timer" -o -name "*.nspawn" -o -name "*.cfg" -o -name "*.http" -o -name "install" -o -name "configure.sh" -o -name "build" -o -name "clean" -o -name "console" -o -name "start" -o -name "stop" -o -name "status" \) -exec sed -i 's/\r$//' {} +
@@ -286,6 +300,13 @@ if [ "$INSTALL_RSTATE" = true ]; then
     cd "$MACHINES_DIR/rstate"
     ./install
     echo -e "${GREEN}rstate installed${NC}"
+fi
+
+if [ "$INSTALL_ONI" = true ]; then
+    print_section "Installing Oni live streaming"
+    cd "$MACHINES_DIR/oni"
+    ./install
+    echo -e "${GREEN}oni installed${NC}"
 fi
 
 if [ "$INSTALL_PAYMENTS" = true ]; then
@@ -326,6 +347,7 @@ done
 [ "$INSTALL_RIBBIT" = true ] && machinectl enable ribbit 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} ribbit"
 [ "$INSTALL_MYCELIUM" = true ] && machinectl enable mycelium 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} mycelium"
 [ "$INSTALL_RSTATE" = true ] && machinectl enable rstate 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} rstate"
+[ "$INSTALL_ONI" = true ] && machinectl enable oni 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} oni"
 [ "$INSTALL_PAYMENTS" = true ] && {
     for svc in bitcoinknots cln lnbits; do
         machinectl enable "$svc" 2>/dev/null || true
@@ -346,6 +368,9 @@ echo -e "  ${BOLD}Your relay-tools stack is running at:${NC}"
 echo ""
 echo -e "  ${GREEN}https://$MYDOMAIN${NC}           — Main site"
 echo -e "  ${GREEN}https://app.$MYDOMAIN${NC}       — Relay Creator admin"
+if [ "$INSTALL_ONI" = true ]; then
+    echo -e "  ${GREEN}https://live.$MYDOMAIN${NC}      — Oni live streaming"
+fi
 echo ""
 echo -e "  ${BOLD}Installed services:${NC}"
 for svc in "${SERVICES[@]}"; do
