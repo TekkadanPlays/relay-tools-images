@@ -1,0 +1,15 @@
+[Unit]
+Description=Oni Streaming Server (live.mycelium.social)
+Wants=network.target
+
+[Service]
+ExecStart=/app/oni -webserverport 8085 -webserverip 127.0.0.1 -rtmpport 1935
+WorkingDirectory=/app
+Restart=always
+User=root
+Type=simple
+TimeoutStopSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

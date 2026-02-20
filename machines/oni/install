@@ -1,0 +1,46 @@
+#!/usr/bin/bash
+# get paths for scripts, the repo parent dir and app name
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+RD="$(dirname "$SD")"
+PASSWORD=creator
+echo $PASSWORD>$RD/$APP.passwd
+cp -rfpu $RD/debian /var/lib/machines/$APP
+mkdir -p /var/lib/machines/$APP/app
+mkdir -p /srv/oni
+cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
+cp $SD/deploy.service /var/lib/machines/$APP/lib/systemd/system/deploy.service
+cp $SD/deploy.timer /var/lib/machines/$APP/lib/systemd/system/deploy.timer
+cp $SD/deploy.sh /var/lib/machines/$APP/usr/local/bin/deploy.sh
+# Strip Windows CRLF line endings that break script execution
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/deploy.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/deploy.timer
+sed -i 's/\r$//' /var/lib/machines/$APP/usr/local/bin/deploy.sh
+systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
+	echo -e "$PASSWORD\n$PASSWORD" | passwd
+	echo "$APP">/etc/hostname
+
+	export DEBIAN_FRONTEND=noninteractive
+	apt update
+	apt -y install --no-install-suggests git curl build-essential ffmpeg sqlite3
+
+	# Install Go
+	GO_VERSION=1.22.5
+	curl -fsSL https://go.dev/dl/go\${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
+	ln -sf /usr/local/go/bin/go /usr/local/bin/go
+	ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+
+	# Install Bun (needed for Inferno frontend build)
+	curl -fsSL https://bun.sh/install | bash
+	ln -sf /root/.bun/bin/bun /usr/local/bin/bun
+	ln -sf /root/.bun/bin/bunx /usr/local/bin/bunx
+
+	# Note: repo clone + build happens on first boot via deploy.timer
+	# because /app is bind-mounted from /srv/oni at runtime
+	systemctl enable app
+	systemctl enable deploy.timer
+EOF
+systemctl stop systemd-nspawn@$APP
