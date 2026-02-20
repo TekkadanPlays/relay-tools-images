@@ -40,6 +40,18 @@ Containerized deployment infrastructure for the **relay-tools** Nostr stack usin
                     └──────────────────────┘      │  Auto-renewal timer     │
                                                   └─────────────────────────┘
 
+    ─── Optional Services ───
+
+    ┌──────────────────┐
+    │ oni               │  live.mycelium.social
+    │ :8085 (web)       │  HAProxy proxies HTTPS → 8085
+    │ :1935 (RTMP)      │  RTMP exposed directly on host
+    │                   │
+    │ Owncast fork      │  Go binary + InfernoJS frontend
+    │ Live streaming    │  Nostr auth (NIP-07/NIP-53)
+    │ SQLite DB         │  Bun builds Inferno → static/web/
+    └──────────────────┘
+
     ─── Optional Payment Stack ───
 
     ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
@@ -91,6 +103,16 @@ Bitcoin Lightning payments for relay subscriptions. Without this, relay creation
 | `keydb` | 6379 | KeyDB — Redis-compatible store (for CoinOS) |
 | `coinos` | 3119 | CoinOS — NIP-07 wallet server |
 
+### STREAMING (optional)
+
+Live streaming server for `live.<yourdomain>`.
+
+| Container | Port | Description |
+|---|---|---|
+| `oni` | 8085 (web), 1935 (RTMP) | Oni — Owncast fork with Nostr auth, NIP-53 live events, InfernoJS frontend |
+
+Oni is a self-contained Go binary. HAProxy routes `live.<domain>` → port 8085. RTMP port 1935 is exposed directly (not proxied). SQLite database in `data/oni.db`. Frontend built with InfernoJS + Blazecn + Tailwind, compiled into `static/web/` and embedded by the Go binary.
+
 ### EXTRAS (WIP)
 
 These are work-in-progress and not yet wired into the installer.
@@ -109,6 +131,7 @@ These are work-in-progress and not yet wired into the installer.
 | [`ribbit.network`](https://github.com/TekkadanPlays/ribbit.network) | Monorepo: Bun/Hono frontend + Kaji + Oni + BlazeCSS | `ribbit`/`mycelium` container at `/app` |
 | [`relaycreator`](https://github.com/TekkadanPlays/relaycreator) | Express API + InfernoJS admin panel + web SPA | `relaycreator` container at `/app` |
 | [`nostr-watch`](https://github.com/sandwichfarm/nostr-watch) | rstate NIP-66 relay discovery engine | `rstate` container at `/app` |
+| [`oni`](https://github.com/TekkadanPlays/oni) | Owncast fork — live streaming with Nostr auth + InfernoJS frontend | `oni` container at `/app` |
 
 ## Quick Start
 
@@ -239,6 +262,7 @@ Containers with a `deploy.timer` check for upstream git changes every 60 seconds
 | `mycelium` | `TekkadanPlays/ribbit.network.git` | bun |
 | `rstate` | `sandwichfarm/nostr-watch.git` | bun |
 | `coinos` | `TekkadanPlays/coinos-server.git` | bun |
+| `oni` | `TekkadanPlays/oni.git` | go build + bun (Inferno frontend) |
 
 Push to the relevant repo and changes deploy within ~60 seconds.
 
@@ -262,6 +286,7 @@ Push to the relevant repo and changes deploy within ~60 seconds.
 | relaycreator | `curl http://127.0.0.1:4000/health` |
 | ribbit / mycelium | `curl http://127.0.0.1:3000/api/health` |
 | rstate | `curl http://127.0.0.1:3100/health/ping` |
+| oni | `curl http://127.0.0.1:8085/api/status` |
 
 ### Key file locations (host-side)
 
@@ -273,6 +298,7 @@ Push to the relevant repo and changes deploy within ~60 seconds.
 | `/srv/rstate/.env` | rstate config (REST_PORT, CVM_SERVER_NSEC, ingest relays) |
 | `/srv/haproxy/certs/bundle.pem` | TLS certificate |
 | `/srv/mysql/.creator-mysql-uri.txt` | MySQL connection string |
+| `/srv/oni/data/oni.db` | Oni SQLite database (stream config, chat, users) |
 
 ## rstate (NIP-66 Relay Discovery)
 
@@ -334,6 +360,9 @@ rstate is a relay state aggregation engine from the [nostr-watch](https://github
 - [x] Migrate relaycreator frontend to InfernoJS + Tailwind
 - [x] Interactive install script with service selection
 - [x] Per-service upgrade script
+- [x] Add Oni container (live streaming, Owncast fork with Nostr + InfernoJS)
+- [ ] Add Oni to configure.sh interactive installer (ONI_ENABLED flag)
+- [ ] Add HAProxy `live.<domain>` routing to configure.sh
 - [ ] Wire up hyphae + ergo (IRC gateway + daemon)
 - [ ] Remove legacy ribbit container after mycelium migration verified
 - [ ] Evaluate relaymon for independent RTT monitoring
