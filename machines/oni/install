@@ -25,7 +25,7 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 
 	export DEBIAN_FRONTEND=noninteractive
 	apt update
-	apt -y install --no-install-suggests git curl build-essential ffmpeg sqlite3
+	apt -y install --no-install-suggests git curl unzip build-essential ffmpeg sqlite3
 
 	# Install Go
 	GO_VERSION=1.22.5
