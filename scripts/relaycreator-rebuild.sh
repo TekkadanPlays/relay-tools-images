@@ -21,18 +21,18 @@ echo ""
 echo "--- Building API server ---"
 nsenter -t "$PID" -m -u -i -n -p -- bash -c '
 cd /app/api-server
-npm install --legacy-peer-deps
+npm install
 npx prisma generate
 npx prisma db push --accept-data-loss 2>/dev/null || npx prisma db push
-npx tsc
+npm run build
 '
 
 echo ""
 echo "--- Building Web SPA ---"
 nsenter -t "$PID" -m -u -i -n -p -- bash -c '
 cd /app/web
-pnpm install --frozen-lockfile 2>/dev/null || pnpm install
-pnpm build
+bun install
+bun run build
 '
 
 echo ""
