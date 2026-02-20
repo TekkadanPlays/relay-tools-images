@@ -5,3 +5,13 @@ debian
 *.passwd
 coinos-server/
 coinos-ui/
+
+# Embedded git repositories
+blazecn/
+blazegraph-samples/
+database/
+kaji/
+
+# Rust build artifacts
+wallet-service/target/
+wallet-service/target-temp/
