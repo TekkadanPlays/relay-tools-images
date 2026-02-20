@@ -1,5 +1,10 @@
 #!/bin/bash
 
+export TMPDIR=/app/tmp
+export PATH=/usr/local/go/bin:/usr/local/bin:$PATH
+mkdir -p /app/tmp
+git config --global --add safe.directory /app 2>/dev/null
+
 deploy_app() {
     echo "detected upstream changes, deploying"
     git pull
@@ -7,7 +12,7 @@ deploy_app() {
 
     # Rebuild Go binary
     echo "→ Building Go binary..."
-    go build -o oni .
+    TMPDIR=/app/tmp go build -o oni .
 
     # Rebuild Inferno frontend (outputs to static/web/)
     echo "→ Building Inferno frontend..."
@@ -39,7 +44,7 @@ if [ ! -f "/firstrun.txt" ]; then
         rm -rf /app/repo-tmp
     fi
     # Build Go binary
-    go build -o oni .
+    TMPDIR=/app/tmp go build -o oni .
     # Build Inferno frontend
     cd /app/web-inferno
     bun install
