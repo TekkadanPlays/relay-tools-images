@@ -17,7 +17,8 @@ deploy_app() {
     # Rebuild Inferno frontend (outputs to static/web/)
     echo "→ Building Inferno frontend..."
     cd /app/web-inferno
-    bun install
+    rm -rf node_modules
+    bun install --frozen-lockfile || bun install
     bun run build.ts
     cd /app
 
@@ -47,7 +48,8 @@ if [ ! -f "/firstrun.txt" ]; then
     TMPDIR=/app/tmp go build -o oni .
     # Build Inferno frontend
     cd /app/web-inferno
-    bun install
+    rm -rf node_modules
+    bun install --frozen-lockfile || bun install
     bun run build.ts
     cd /app
     touch /firstrun.txt
