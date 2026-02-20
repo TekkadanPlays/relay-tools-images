@@ -1,4 +1,5 @@
 #!/bin/bash
+# Hotfix: force-deploy the latest relaycreator code inside the running container.
 machinectl shell relaycreator /bin/bash -c '
 cd /app
 git remote set-url origin https://github.com/TekkadanPlays/relaycreator.git
@@ -8,15 +9,15 @@ systemctl stop app
 
 # Build Express API server
 cd /app/api-server
-pnpm install
+npm install
 npx prisma generate
 npx prisma db push --accept-data-loss 2>/dev/null || true
-npx tsc
+npm run build
 
-# Build React SPA
+# Build InfernoJS SPA
 cd /app/web
-pnpm install
-npx vite build
+bun install
+bun run build
 
 cd /app
 systemctl start app
