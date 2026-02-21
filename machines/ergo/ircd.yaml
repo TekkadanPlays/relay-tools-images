@@ -130,6 +130,11 @@ accounts:
         auto-away: "opt-in"
         always-on-expiration: 90d
 
+# Channel naming convention:
+#   #lobby              — public lobby, auto-joined by all users
+#   #live-<stream>      — per-stream chat (created/destroyed by live.mycelium.social)
+#   #relay-<domain>     — per-relay chat for NIP-42 authenticated relay operators
+#   #<custom>           — user-created channels
 channels:
     default-modes: +ntC
     max-channels-per-client: 100
@@ -137,7 +142,7 @@ channels:
     registration:
         enabled: true
         operator-only: false
-        max-channels-per-account: 15
+        max-channels-per-account: 25
     list-delay: 0s
     invite-expiration: 24h
     auto-join:
