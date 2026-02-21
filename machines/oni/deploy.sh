@@ -12,7 +12,13 @@ fi
 
 deploy_app() {
     echo "deploying oni..."
-    git pull origin main
+
+    # Discard local changes (build artifacts from previous bun run build.ts)
+    # so git pull doesn't fail with "Your local changes would be overwritten"
+    git reset --hard HEAD
+    git clean -fd static/web/ 2>/dev/null
+
+    git pull origin main || { echo "ERROR: git pull failed"; return 1; }
     systemctl stop app
 
     # Rebuild Inferno frontend FIRST (outputs to static/web/)
