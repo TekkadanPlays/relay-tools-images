@@ -180,13 +180,38 @@ systemctl status app --no-pager -l || true
     echo -e "${GREEN}coinos upgraded${NC}"
 }
 
+upgrade_oni() {
+    echo -e "${CYAN}Upgrading Mycelium Live (oni)...${NC}"
+    nsrun oni '
+cd /app/live
+git reset --hard HEAD
+git clean -fd dist/ 2>/dev/null
+git pull origin main
+
+# Rebuild Inferno frontend
+bun install --frozen-lockfile || bun install
+bun run build
+
+# Restart web server
+systemctl restart app
+
+# Pull latest OME Docker image if available
+docker pull airensoft/ovenmediaengine:latest 2>/dev/null && systemctl restart ome || true
+
+echo "Mycelium Live rebuilt and restarted"
+systemctl status app --no-pager -l || true
+systemctl status ome --no-pager -l || true
+'
+    echo -e "${GREEN}oni (Mycelium Live) upgraded${NC}"
+}
+
 # ─── Interactive mode ───
 if [ -z "$1" ]; then
     echo -e "${BOLD}Available services to upgrade:${NC}"
     echo ""
 
     # Check which containers are running
-    for svc in relaycreator ribbit mycelium rstate strfry haproxy coinos; do
+    for svc in relaycreator ribbit mycelium rstate oni strfry haproxy coinos; do
         if container_running "$svc"; then
             echo -e "  ${GREEN}●${NC} $svc"
         else
@@ -214,9 +239,10 @@ case "$SERVICE" in
     strfry)       upgrade_strfry "$REBUILD" ;;
     haproxy)      upgrade_haproxy ;;
     coinos)       upgrade_coinos ;;
+    oni)          upgrade_oni ;;
     *)
         echo -e "${RED}Unknown service: $SERVICE${NC}"
-        echo "Available: relaycreator, ribbit, mycelium, rstate, strfry, haproxy, coinos"
+        echo "Available: relaycreator, ribbit, mycelium, rstate, oni, strfry, haproxy, coinos"
         exit 1
         ;;
 esac

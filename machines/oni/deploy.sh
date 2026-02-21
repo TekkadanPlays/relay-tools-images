@@ -1,9 +1,7 @@
 #!/bin/bash
 
-export TMPDIR=/app/tmp
-export PATH=/usr/local/go/bin:/usr/local/bin:$PATH
-mkdir -p /app/tmp
-git config --global --add safe.directory /app 2>/dev/null
+export PATH=/usr/local/bin:$PATH
+git config --global --add safe.directory /app/live 2>/dev/null
 
 FORCE=0
 if [ "${1:-}" = "--force" ]; then
@@ -11,37 +9,57 @@ if [ "${1:-}" = "--force" ]; then
 fi
 
 deploy_app() {
-    echo "deploying oni..."
+    echo "deploying mycelium live..."
 
-    # Discard local changes (build artifacts from previous bun run build.ts)
-    # so git pull doesn't fail with "Your local changes would be overwritten"
+    cd /app/live
+
+    # Discard local changes (build artifacts from previous bun run build)
     git reset --hard HEAD
-    git clean -fd static/web/ 2>/dev/null
+    git clean -fd dist/ 2>/dev/null
 
     git pull origin main || { echo "ERROR: git pull failed"; return 1; }
-    systemctl stop app
 
-    # Rebuild Inferno frontend FIRST (outputs to static/web/)
-    # Must happen before Go build because go:embed bakes static/web/ into the binary
+    # Rebuild Inferno frontend
     echo "→ Building Inferno frontend..."
-    cd /app/web-inferno
-    rm -rf node_modules
     bun install --frozen-lockfile || bun install
-    bun run build.ts
-    cd /app
+    bun run build
 
-    # Rebuild Go binary (embeds the freshly built static/web/)
-    echo "→ Building Go binary..."
-    TMPDIR=/app/tmp go build -o oni .
+    # Restart services
+    echo "→ Restarting services..."
+    systemctl restart app
 
-    systemctl start app
-    echo "→ Oni deploy complete"
+    # Pull latest OME image if available (non-blocking)
+    docker pull airensoft/ovenmediaengine:latest 2>/dev/null && systemctl restart ome || true
+
+    echo "→ Mycelium Live deploy complete"
 }
 
-cd /app
+# Ensure /app/live exists
+if [ ! -d "/app/live" ]; then
+    mkdir -p /app/live
+fi
+
+cd /app/live
+
+# First run: clone the repo
+if [ ! -f "/firstrun.txt" ]; then
+    echo "First run: cloning and building app"
+    if [ ! -f "/app/live/package.json" ]; then
+        git clone https://github.com/TekkadanPlays/mycelium-live.git /app/live-tmp
+        mv /app/live-tmp/* /app/live-tmp/.* /app/live/ 2>/dev/null || true
+        rm -rf /app/live-tmp
+    fi
+    cd /app/live
+    bun install --frozen-lockfile || bun install
+    bun run build
+    touch /firstrun.txt
+    systemctl restart ome
+    systemctl restart app
+    exit 0
+fi
 
 # Ensure remote points to the correct repo
-EXPECTED_REMOTE="https://github.com/TekkadanPlays/oni.git"
+EXPECTED_REMOTE="https://github.com/TekkadanPlays/mycelium-live.git"
 CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null)
 if [ "$CURRENT_REMOTE" != "$EXPECTED_REMOTE" ]; then
     echo "Updating git remote from $CURRENT_REMOTE to $EXPECTED_REMOTE"
@@ -49,26 +67,6 @@ if [ "$CURRENT_REMOTE" != "$EXPECTED_REMOTE" ]; then
 fi
 
 git fetch origin 2>/dev/null || true
-
-if [ ! -f "/firstrun.txt" ]; then
-    echo "First run: cloning and building app"
-    if [ ! -f "/app/main.go" ]; then
-        git clone https://github.com/TekkadanPlays/oni.git /app/repo-tmp
-        mv /app/repo-tmp/* /app/repo-tmp/.* /app/ 2>/dev/null || true
-        rm -rf /app/repo-tmp
-    fi
-    # Build Inferno frontend FIRST (go:embed needs fresh static/web/)
-    cd /app/web-inferno
-    rm -rf node_modules
-    bun install --frozen-lockfile || bun install
-    bun run build.ts
-    cd /app
-    # Build Go binary (embeds the freshly built static/web/)
-    TMPDIR=/app/tmp go build -o oni .
-    touch /firstrun.txt
-    systemctl restart app
-    exit 0
-fi
 
 if [ "$FORCE" = "1" ]; then
     echo "forced rebuild requested"

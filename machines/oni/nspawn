@@ -3,6 +3,8 @@ Boot=yes
 WorkingDirectory=/app
 PrivateUsers=no
 LinkJournal=try-host
+Capability=all
+SystemCallFilter=~
 [Network]
 VirtualEthernet=no
 [Files]

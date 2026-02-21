@@ -1,0 +1,31 @@
+[Unit]
+Description=OvenMediaEngine (Docker) — live streaming media server
+Wants=network.target
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStartPre=-/usr/bin/docker stop ome
+ExecStartPre=-/usr/bin/docker rm ome
+ExecStart=/usr/bin/docker run --rm --name ome \
+    --network host \
+    -e OME_HOST_IP=127.0.0.1 \
+    -e OME_RTMP_PROV_PORT=1935 \
+    -e OME_SRT_PROV_PORT=9999 \
+    -e OME_LLHLS_STREAM_PORT=3333 \
+    -e OME_WEBRTC_SIGNALLING_PORT=3333 \
+    -e OME_WEBRTC_SIGNALLING_TLS_PORT=3334 \
+    -e OME_WEBRTC_TCP_RELAY_PORT=3478 \
+    -e OME_WEBRTC_CANDIDATE_PORT=10000-10004/udp \
+    -e OME_ORIGIN_PORT=9000 \
+    -e OME_API_PORT=8081 \
+    -v /app/live/ome-conf:/opt/ovenmediaengine/bin/origin_conf \
+    airensoft/ovenmediaengine:latest \
+    /opt/ovenmediaengine/bin/OvenMediaEngine -c origin_conf
+ExecStop=/usr/bin/docker stop ome
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

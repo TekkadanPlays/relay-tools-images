@@ -161,9 +161,9 @@ echo -e "${CYAN}EXTRAS (optional):${NC}"
 
 INSTALL_ONI=false
 
-if confirm "Install Oni live streaming server?" "n"; then
+if confirm "Install Mycelium Live streaming server?" "n"; then
     INSTALL_ONI=true
-    print_service "on" "oni" "Oni — Owncast-based live streaming (Go + InfernoJS)"
+    print_service "on" "oni" "Mycelium Live — OvenMediaEngine + Bun/InfernoJS streaming"
 fi
 
 # Payments
@@ -369,7 +369,7 @@ echo ""
 echo -e "  ${GREEN}https://$MYDOMAIN${NC}           — Main site"
 echo -e "  ${GREEN}https://app.$MYDOMAIN${NC}       — Relay Creator admin"
 if [ "$INSTALL_ONI" = true ]; then
-    echo -e "  ${GREEN}https://live.$MYDOMAIN${NC}      — Oni live streaming"
+    echo -e "  ${GREEN}https://live.$MYDOMAIN${NC}      — Mycelium Live streaming"
 fi
 echo ""
 echo -e "  ${BOLD}Installed services:${NC}"
