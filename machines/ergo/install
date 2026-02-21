@@ -28,8 +28,11 @@ cp $SD/ircd.motd /srv/ergo/ircd.motd
 sed -i 's/\r$//' /srv/ergo/ircd.yaml
 sed -i 's/\r$//' /srv/ergo/ircd.motd
 
+# Create languages directory on host (bind-mounted to /data/languages in container)
+mkdir -p /srv/ergo/languages
+
 # Install Ergo binary inside the container
-ERGO_VERSION="2.14.0"
+ERGO_VERSION="2.16.0"
 ERGO_URL="https://github.com/ergochat/ergo/releases/download/v${ERGO_VERSION}/ergo-${ERGO_VERSION}-linux-x86_64.tar.gz"
 
 systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
@@ -39,13 +42,18 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	apt -y install curl ca-certificates
 	# Download and install Ergo
 	curl -fsSL "$ERGO_URL" -o /tmp/ergo.tar.gz
+	if [ ! -f /tmp/ergo.tar.gz ]; then
+		echo "ERROR: Failed to download Ergo"
+		exit 1
+	fi
 	tar xzf /tmp/ergo.tar.gz -C /tmp
+	# Copy binary
 	cp /tmp/ergo-${ERGO_VERSION}-linux-x86_64/ergo /usr/local/bin/ergo
 	chmod +x /usr/local/bin/ergo
-	rm -rf /tmp/ergo*
-	# Copy default language files
+	# Copy default language files BEFORE cleanup
 	mkdir -p /data/languages
 	cp -r /tmp/ergo-${ERGO_VERSION}-linux-x86_64/languages/* /data/languages/ 2>/dev/null || true
+	rm -rf /tmp/ergo*
 	systemctl enable app
 EOF
 systemctl stop systemd-nspawn@$APP
