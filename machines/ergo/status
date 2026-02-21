@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+machinectl shell $APP /usr/bin/systemctl status app

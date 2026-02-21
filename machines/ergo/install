@@ -1,0 +1,54 @@
+#!/usr/bin/bash
+# Ergo IRC server — install into systemd-nspawn container
+# Ergo listens on 127.0.0.1:6667 (plaintext, loopback only)
+# Hyphae connects to it via raw TCP from its own container
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+RD="$(dirname "$SD")"
+PASSWORD=creator
+echo $PASSWORD>$RD/$APP.passwd
+
+# Create container from base Debian image
+cp -rfpu $RD/debian /var/lib/machines/$APP
+
+# Create persistent data directory on host
+mkdir -p /srv/ergo
+
+# Copy nspawn config
+cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+
+# Copy service file into container
+cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
+
+# Copy Ergo config + MOTD to persistent data dir
+cp $SD/ircd.yaml /srv/ergo/ircd.yaml
+cp $SD/ircd.motd /srv/ergo/ircd.motd
+sed -i 's/\r$//' /srv/ergo/ircd.yaml
+sed -i 's/\r$//' /srv/ergo/ircd.motd
+
+# Install Ergo binary inside the container
+ERGO_VERSION="2.14.0"
+ERGO_URL="https://github.com/ergochat/ergo/releases/download/v${ERGO_VERSION}/ergo-${ERGO_VERSION}-linux-x86_64.tar.gz"
+
+systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
+	echo -e "$PASSWORD\n$PASSWORD" | passwd
+	echo "$APP">/etc/hostname
+	apt update
+	apt -y install curl ca-certificates
+	# Download and install Ergo
+	curl -fsSL "$ERGO_URL" -o /tmp/ergo.tar.gz
+	tar xzf /tmp/ergo.tar.gz -C /tmp
+	cp /tmp/ergo-${ERGO_VERSION}-linux-x86_64/ergo /usr/local/bin/ergo
+	chmod +x /usr/local/bin/ergo
+	rm -rf /tmp/ergo*
+	# Copy default language files
+	mkdir -p /data/languages
+	cp -r /tmp/ergo-${ERGO_VERSION}-linux-x86_64/languages/* /data/languages/ 2>/dev/null || true
+	systemctl enable app
+EOF
+systemctl stop systemd-nspawn@$APP
+echo "Ergo installed. Start with: machinectl start $APP"
+echo "Config at: /srv/ergo/ircd.yaml"
+echo "Don't forget to set the oper password: machinectl shell $APP /usr/local/bin/ergo genpasswd"

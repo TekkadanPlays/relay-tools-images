@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+machinectl start $APP
+sleep 2
+machinectl shell $APP /usr/bin/systemctl start app
+echo "$APP started"

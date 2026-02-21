@@ -1,0 +1,9 @@
+[Exec]
+Boot=yes
+WorkingDirectory=/data
+PrivateUsers=no
+LinkJournal=try-host
+[Network]
+VirtualEthernet=no
+[Files]
+Bind=/srv/ergo:/data
