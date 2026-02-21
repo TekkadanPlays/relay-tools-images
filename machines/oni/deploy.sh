@@ -15,17 +15,18 @@ deploy_app() {
     git pull origin main
     systemctl stop app
 
-    # Rebuild Go binary
-    echo "→ Building Go binary..."
-    TMPDIR=/app/tmp go build -o oni .
-
-    # Rebuild Inferno frontend (outputs to static/web/)
+    # Rebuild Inferno frontend FIRST (outputs to static/web/)
+    # Must happen before Go build because go:embed bakes static/web/ into the binary
     echo "→ Building Inferno frontend..."
     cd /app/web-inferno
     rm -rf node_modules
     bun install --frozen-lockfile || bun install
     bun run build.ts
     cd /app
+
+    # Rebuild Go binary (embeds the freshly built static/web/)
+    echo "→ Building Go binary..."
+    TMPDIR=/app/tmp go build -o oni .
 
     systemctl start app
     echo "→ Oni deploy complete"
@@ -50,14 +51,14 @@ if [ ! -f "/firstrun.txt" ]; then
         mv /app/repo-tmp/* /app/repo-tmp/.* /app/ 2>/dev/null || true
         rm -rf /app/repo-tmp
     fi
-    # Build Go binary
-    TMPDIR=/app/tmp go build -o oni .
-    # Build Inferno frontend
+    # Build Inferno frontend FIRST (go:embed needs fresh static/web/)
     cd /app/web-inferno
     rm -rf node_modules
     bun install --frozen-lockfile || bun install
     bun run build.ts
     cd /app
+    # Build Go binary (embeds the freshly built static/web/)
+    TMPDIR=/app/tmp go build -o oni .
     touch /firstrun.txt
     systemctl restart app
     exit 0
