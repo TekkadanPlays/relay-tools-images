@@ -28,7 +28,7 @@ server:
     check-ident: false
     coerce-ident: '~u'
 
-    motd: ircd.motd
+    motd: /data/ircd.motd
     motd-formatting: true
 
     idle-timeouts:
@@ -190,10 +190,10 @@ logging:
 debug:
     recover-from-errors: true
 
-lock-file: "ircd.lock"
+lock-file: "/data/ircd.lock"
 
 datastore:
-    path: ircd.db
+    path: /data/ircd.db
     autoupgrade: true
     mysql:
         enabled: false
@@ -201,7 +201,7 @@ datastore:
 languages:
     enabled: true
     default: en
-    path: languages
+    path: /data/languages
 
 limits:
     nicklen: 32
