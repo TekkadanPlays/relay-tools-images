@@ -1,0 +1,45 @@
+{
+  "applicationId": "tools.relay.desktop",
+  "version": "0.1.0",
+  "defaultMode": "window",
+  "documentRoot": "frontend/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "tokenSecurity": "one-time",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": true
+  },
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "window.*",
+    "events.*",
+    "filesystem.*",
+    "clipboard.*",
+    "debug.*",
+    "computer.*",
+    "storage.*"
+  ],
+  "modes": {
+    "window": {
+      "title": "Relay Tools",
+      "width": 1200,
+      "height": 800,
+      "minWidth": 900,
+      "minHeight": 600,
+      "center": true,
+      "icon": "/icon.png",
+      "enableInspector": false
+    }
+  },
+  "cli": {
+    "binaryName": "relay-tools",
+    "resourceFile": "relay-tools.neu",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/neutralino.js",
+    "binaryVersion": "5.5.0",
+    "clientVersion": "5.5.0"
+  }
+}

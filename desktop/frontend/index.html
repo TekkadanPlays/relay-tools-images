@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relay Tools</title>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --card: #111113;
+      --border: #1e1e22;
+      --fg: #fafafa;
+      --muted: #71717a;
+      --accent: #8b5cf6;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container { max-width: 640px; width: 100%; padding: 2rem; }
+    .logo { text-align: center; margin-bottom: 2rem; }
+    .logo h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    .logo p { color: var(--muted); font-size: 0.875rem; margin-top: 0.25rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .step-dot.pending { background: var(--muted); opacity: 0.4; }
+    .step-dot.running { background: var(--amber); animation: pulse 1s infinite; }
+    .step-dot.done { background: var(--green); }
+    .step-dot.error { background: var(--red); }
+    .step-dot.skipped { background: var(--muted); }
+    .step-label { font-size: 0.875rem; flex: 1; }
+    .step-msg { font-size: 0.75rem; color: var(--muted); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: var(--accent);
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-outline { background: transparent; border-color: var(--border); color: var(--fg); }
+    .status-bar {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+    }
+    .svc-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+    .svc-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.5rem; }
+    #phase-loading, #phase-setup, #phase-running { display: none; }
+    .active { display: flex !important; flex-direction: column; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <h1>Relay Tools</h1>
+      <p>Local Nostr relay stack</p>
+    </div>
+
+    <!-- Phase: Loading -->
+    <div id="phase-loading" class="card active" style="text-align: center;">
+      <p style="color: var(--muted);">Connecting to service manager...</p>
+    </div>
+
+    <!-- Phase: Setup Wizard -->
+    <div id="phase-setup">
+      <div class="card">
+        <h2 style="font-size: 1rem; margin-bottom: 1rem;">First-Run Setup</h2>
+        <div id="setup-steps"></div>
+      </div>
+      <div class="actions">
+        <button id="btn-setup" class="btn" onclick="runSetup()">Install & Configure</button>
+      </div>
+    </div>
+
+    <!-- Phase: Running -->
+    <div id="phase-running">
+      <div class="card" style="text-align: center;">
+        <h2 style="font-size: 1rem; margin-bottom: 0.5rem;">Services</h2>
+        <div class="status-bar" id="svc-status"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="openAdmin()">Open Admin Panel</button>
+        <button class="btn btn-outline" onclick="refreshStatus()">Refresh</button>
+        <button class="btn btn-outline" onclick="stopAll()">Stop All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Neutralino.js client -->
+  <script src="/neutralino.js"></script>
+  <script>
+    // Buntralino client will be loaded after Neutralino initializes
+    let buntralinoReady = false;
+
+    function showPhase(id) {
+      document.querySelectorAll('[id^="phase-"]').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // ─── Setup wizard ──────────────────────────────────────────────────
+
+    function renderSteps(steps) {
+      const container = document.getElementById('setup-steps');
+      container.innerHTML = steps.map(s => `
+        <div class="step">
+          <div class="step-dot ${s.status}"></div>
+          <span class="step-label">${s.label}</span>
+          <span class="step-msg">${s.message || s.status}</span>
+        </div>
+      `).join('');
+    }
+
+    async function runSetup() {
+      const btn = document.getElementById('btn-setup');
+      btn.disabled = true;
+      btn.textContent = 'Installing...';
+
+      try {
+        // Poll setup status
+        const poll = setInterval(async () => {
+          try {
+            const status = await callBun('setup:status');
+            renderSteps(status.steps);
+            if (!status.running && status.steps.some(s => s.status === 'done' || s.status === 'error')) {
+              clearInterval(poll);
+              const allDone = status.steps.every(s => s.status === 'done' || s.status === 'skipped');
+              if (allDone) {
+                btn.textContent = 'Starting services...';
+                await callBun('services:startAll');
+                showPhase('phase-running');
+                refreshStatus();
+              } else {
+                btn.disabled = false;
+                btn.textContent = 'Retry Setup';
+              }
+            }
+          } catch { /* ignore poll errors */ }
+        }, 1000);
+
+        await callBun('setup:run');
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Retry Setup';
+        console.error('Setup error:', err);
+      }
+    }
+
+    // ─── Running phase ─────────────────────────────────────────────────
+
+    async function refreshStatus() {
+      try {
+        const status = await callBun('services:status');
+        const container = document.getElementById('svc-status');
+        container.innerHTML = Object.values(status).map(s => {
+          const color = s.status === 'running' ? 'var(--green)'
+            : s.status === 'error' ? 'var(--red)'
+            : s.status === 'starting' ? 'var(--amber)'
+            : 'var(--muted)';
+          return `<div class="svc-pill">
+            <div class="dot" style="background:${color}"></div>
+            ${s.name}
+          </div>`;
+        }).join('');
+      } catch (err) {
+        console.error('Status error:', err);
+      }
+    }
+
+    function openAdmin() {
+      // Open the relaycreator admin panel in the default browser
+      Neutralino.os.open('http://localhost:4000/admin');
+    }
+
+    async function stopAll() {
+      await callBun('services:stopAll');
+      refreshStatus();
+    }
+
+    // ─── Buntralino bridge ─────────────────────────────────────────────
+
+    // callBun sends a method call to the Bun main process via buntralino
+    let _bunPort = null;
+    let _bunToken = null;
+
+    async function callBun(method, args) {
+      if (!_bunPort) throw new Error('Not connected to Bun process');
+      const resp = await fetch(`http://localhost:${_bunPort}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: _bunToken, method, args: args || {} }),
+      });
+      // Buntralino uses WebSocket, but we can also use the registered method system
+      // For now, use the Neutralino events bridge
+      return new Promise((resolve, reject) => {
+        const id = Math.random().toString(36).slice(2);
+        const handler = (evt) => {
+          if (evt.detail && evt.detail.requestId === id) {
+            Neutralino.events.off('buntralinoResponse', handler);
+            if (evt.detail.error) reject(new Error(evt.detail.error));
+            else resolve(evt.detail.result);
+          }
+        };
+        Neutralino.events.on('buntralinoResponse', handler);
+        Neutralino.events.dispatch('buntralinoRequest', { id, method, args: args || {} });
+      });
+    }
+
+    // ─── Init ──────────────────────────────────────────────────────────
+
+    Neutralino.init();
+
+    Neutralino.events.on('buntralinoRegisterParent', (evt) => {
+      _bunPort = evt.detail.port;
+      _bunToken = evt.detail.token;
+      buntralinoReady = true;
+      init();
+    });
+
+    async function init() {
+      try {
+        const reqs = await callBun('setup:check');
+        const needsSetup = !reqs.relaycreator || !reqs.mariadb;
+
+        if (needsSetup) {
+          const status = await callBun('setup:status');
+          renderSteps(status.steps);
+          showPhase('phase-setup');
+        } else {
+          showPhase('phase-running');
+          refreshStatus();
+          // Auto-refresh every 5s
+          setInterval(refreshStatus, 5000);
+        }
+      } catch (err) {
+        console.error('Init error:', err);
+        document.getElementById('phase-loading').innerHTML =
+          `<p style="color: var(--red);">Failed to connect: ${err.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
