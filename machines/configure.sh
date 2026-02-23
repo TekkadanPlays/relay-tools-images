@@ -55,7 +55,7 @@ systemd-nspawn --pipe -M keys-certs-manager /bin/bash << EOF
     # Build domain list based on enabled services
     CERT_DOMAINS="-d $MYDOMAIN -d app.$MYDOMAIN"
     [ "${HYPHAE_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d chat.$MYDOMAIN"
-    [ "${ONI_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d live.$MYDOMAIN"
+    [ "${LIVE_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d live.$MYDOMAIN"
 
     if [ -z "$MYEMAIL" ]; then
         certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" $CERT_DOMAINS --agree-tos --register-unsafely-without-email --standalone --preferred-challenges http --non-interactive
@@ -211,12 +211,13 @@ EOF
     echo "rstate relay discovery API started on port 3100"
 fi
 
-# ─── OPTIONAL: Oni live streaming ───
-if [ "${ONI_ENABLED:-false}" = "true" ]; then
-    echo "=== Setting up Oni live streaming ==="
-    mkdir -p /srv/oni
-    machinectl start oni
-    echo "Oni started (auto-deploys on first boot via deploy.timer)"
+# ─── OPTIONAL: Mycelium Live streaming (OvenMediaEngine + Bun) ───
+if [ "${LIVE_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up Mycelium Live (OvenMediaEngine) ==="
+    mkdir -p /srv/mycelium-live
+    machinectl start mycelium-live
+    echo "Mycelium Live started (auto-deploys on first boot via deploy.timer)"
+    echo "  Bun server on port 8085, OME LLHLS on port 3333"
 fi
 
 # ─── OPTIONAL: Ergo IRC server ───

@@ -1,0 +1,10 @@
+[Unit]
+Description=Mycelium Live auto-deploy timer
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=120
+Unit=deploy.service
+
+[Install]
+WantedBy=timers.target

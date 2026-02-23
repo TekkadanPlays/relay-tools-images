@@ -1,0 +1,19 @@
+[Unit]
+Description=Mycelium Live (live.mycelium.social — Bun + OvenMediaEngine)
+Wants=network.target
+
+[Service]
+ExecStart=/usr/local/bin/bun run /app/server.ts
+WorkingDirectory=/app
+Restart=always
+User=root
+Type=simple
+TimeoutStopSec=10
+KillMode=process
+Environment=PORT=8085
+Environment=OME_HOST=127.0.0.1
+Environment=OME_LLHLS_PORT=3333
+EnvironmentFile=-/app/.env
+
+[Install]
+WantedBy=multi-user.target

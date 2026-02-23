@@ -1,0 +1,9 @@
+[Exec]
+Boot=yes
+WorkingDirectory=/app
+PrivateUsers=no
+LinkJournal=try-host
+[Network]
+VirtualEthernet=no
+[Files]
+Bind=/srv/mycelium-live:/app
