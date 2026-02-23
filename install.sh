@@ -160,10 +160,19 @@ echo ""
 echo -e "${CYAN}EXTRAS (optional):${NC}"
 
 INSTALL_ONI=false
+INSTALL_HYPHAE=false
+INSTALL_ERGO=false
 
-if confirm "Install Mycelium Live streaming server?" "n"; then
+if confirm "Install Oni live streaming server?" "n"; then
     INSTALL_ONI=true
-    print_service "on" "oni" "Mycelium Live — OvenMediaEngine + Bun/InfernoJS streaming"
+    print_service "on" "oni" "Oni — Owncast-based live streaming (Go + InfernoJS)"
+fi
+
+if confirm "Install Hyphae IRC web client + Ergo IRC server?" "n"; then
+    INSTALL_HYPHAE=true
+    INSTALL_ERGO=true
+    print_service "on" "ergo"   "Ergo — IRC server (chat backend)"
+    print_service "on" "hyphae" "Hyphae — IRC web client (Bun + HTMX)"
 fi
 
 # Payments
@@ -196,6 +205,8 @@ SERVICES=("mysql" "strfry" "haproxy" "relaycreator" "keys-certs-manager")
 [ "$INSTALL_MYCELIUM" = true ] && SERVICES+=("mycelium")
 [ "$INSTALL_RSTATE" = true ] && SERVICES+=("rstate")
 [ "$INSTALL_ONI" = true ] && SERVICES+=("oni")
+[ "$INSTALL_HYPHAE" = true ] && SERVICES+=("hyphae")
+[ "$INSTALL_ERGO" = true ] && SERVICES+=("ergo")
 [ "$INSTALL_PAYMENTS" = true ] && SERVICES+=("bitcoinknots" "cln" "lnbits")
 [ "$INSTALL_COINOS" = true ] && SERVICES+=("keydb" "coinos")
 
@@ -218,6 +229,8 @@ RIBBIT_ENABLED=$INSTALL_RIBBIT
 MYCELIUM_ENABLED=$INSTALL_MYCELIUM
 RSTATE_ENABLED=$INSTALL_RSTATE
 ONI_ENABLED=$INSTALL_ONI
+HYPHAE_ENABLED=$INSTALL_HYPHAE
+ERGO_ENABLED=$INSTALL_ERGO
 PAYMENTS_ENABLED=$INSTALL_PAYMENTS
 COINOS_ENABLED=$INSTALL_COINOS
 EOF
@@ -265,6 +278,8 @@ mkdir -p /srv/strfry /srv/haproxy /srv/mysql /srv/relaycreator
 [ "$INSTALL_MYCELIUM" = true ] && mkdir -p /srv/mycelium
 [ "$INSTALL_RSTATE" = true ] && mkdir -p /srv/rstate
 [ "$INSTALL_ONI" = true ] && mkdir -p /srv/oni
+[ "$INSTALL_HYPHAE" = true ] && mkdir -p /srv/hyphae
+[ "$INSTALL_ERGO" = true ] && mkdir -p /srv/ergo
 
 # Strip CRLF from all scripts (Windows clone protection)
 find "$MACHINES_DIR" -type f \( -name "*.sh" -o -name "*.service" -o -name "*.timer" -o -name "*.nspawn" -o -name "*.cfg" -o -name "*.http" -o -name "install" -o -name "configure.sh" -o -name "build" -o -name "clean" -o -name "console" -o -name "start" -o -name "stop" -o -name "status" \) -exec sed -i 's/\r$//' {} +
@@ -309,6 +324,20 @@ if [ "$INSTALL_ONI" = true ]; then
     echo -e "${GREEN}oni installed${NC}"
 fi
 
+if [ "$INSTALL_ERGO" = true ]; then
+    print_section "Installing Ergo IRC server"
+    cd "$MACHINES_DIR/ergo"
+    ./install
+    echo -e "${GREEN}ergo installed${NC}"
+fi
+
+if [ "$INSTALL_HYPHAE" = true ]; then
+    print_section "Installing Hyphae IRC web client"
+    cd "$MACHINES_DIR/hyphae"
+    ./install
+    echo -e "${GREEN}hyphae installed${NC}"
+fi
+
 if [ "$INSTALL_PAYMENTS" = true ]; then
     print_section "Installing payment stack"
     for svc in bitcoinknots cln lnbits; do
@@ -348,6 +377,8 @@ done
 [ "$INSTALL_MYCELIUM" = true ] && machinectl enable mycelium 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} mycelium"
 [ "$INSTALL_RSTATE" = true ] && machinectl enable rstate 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} rstate"
 [ "$INSTALL_ONI" = true ] && machinectl enable oni 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} oni"
+[ "$INSTALL_ERGO" = true ] && machinectl enable ergo 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} ergo"
+[ "$INSTALL_HYPHAE" = true ] && machinectl enable hyphae 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} hyphae"
 [ "$INSTALL_PAYMENTS" = true ] && {
     for svc in bitcoinknots cln lnbits; do
         machinectl enable "$svc" 2>/dev/null || true
@@ -369,7 +400,10 @@ echo ""
 echo -e "  ${GREEN}https://$MYDOMAIN${NC}           — Main site"
 echo -e "  ${GREEN}https://app.$MYDOMAIN${NC}       — Relay Creator admin"
 if [ "$INSTALL_ONI" = true ]; then
-    echo -e "  ${GREEN}https://live.$MYDOMAIN${NC}      — Mycelium Live streaming"
+    echo -e "  ${GREEN}https://live.$MYDOMAIN${NC}      — Oni live streaming"
+fi
+if [ "$INSTALL_HYPHAE" = true ]; then
+    echo -e "  ${GREEN}https://chat.$MYDOMAIN${NC}      — Hyphae IRC web client"
 fi
 echo ""
 echo -e "  ${BOLD}Installed services:${NC}"

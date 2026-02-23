@@ -109,9 +109,9 @@ Live streaming server for `live.<yourdomain>`.
 
 | Container | Port | Description |
 |---|---|---|
-| `oni` | 8085 (web), 1935 (RTMP), 9999 (SRT), 3333 (LLHLS/WebRTC) | Mycelium Live — OvenMediaEngine + Bun/InfernoJS |
+| `oni` | 8085 (web), 1935 (RTMP) | Oni — Owncast fork with Nostr auth, NIP-53 live events, InfernoJS frontend |
 
-Mycelium Live uses OvenMediaEngine (Docker) for media ingest/output and a Bun web server for the frontend + API. HAProxy routes `live.<domain>` → port 8085. RTMP/SRT ports are exposed directly. Frontend built with InfernoJS + Blazecn + Tailwind. Supports LLHLS and WebRTC playback, NIP-53 live event broadcasting, and Nostr identity via NIP-07/NIP-55.
+Oni is a self-contained Go binary. HAProxy routes `live.<domain>` → port 8085. RTMP port 1935 is exposed directly (not proxied). SQLite database in `data/oni.db`. Frontend built with InfernoJS + Blazecn + Tailwind, compiled into `static/web/` and embedded by the Go binary.
 
 ### EXTRAS (WIP)
 

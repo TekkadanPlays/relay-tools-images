@@ -181,28 +181,71 @@ systemctl status app --no-pager -l || true
 }
 
 upgrade_oni() {
-    echo -e "${CYAN}Upgrading Mycelium Live (oni)...${NC}"
-    nsrun oni '
-cd /app/live
-git reset --hard HEAD
-git clean -fd dist/ 2>/dev/null
-git pull origin main
+    local force=$1
+    echo -e "${CYAN}Upgrading oni...${NC}"
+    if [ "$force" = "--force" ]; then
+        nsrun oni 'bash /usr/local/bin/deploy.sh --force'
+    else
+        nsrun oni 'bash /usr/local/bin/deploy.sh --force'
+    fi
+    echo -e "${GREEN}oni upgraded${NC}"
+}
 
-# Rebuild Inferno frontend
-bun install --frozen-lockfile || bun install
-bun run build
-
-# Restart web server
-systemctl restart app
-
-# Pull latest OME Docker image if available
-docker pull airensoft/ovenmediaengine:latest 2>/dev/null && systemctl restart ome || true
-
-echo "Mycelium Live rebuilt and restarted"
+upgrade_hyphae() {
+    echo -e "${CYAN}Upgrading hyphae...${NC}"
+    nsrun hyphae '
+cd /app && git pull origin main
+systemctl stop app
+bun install
+bun run build:css
+bun run build:client
+systemctl start app
+sleep 2
 systemctl status app --no-pager -l || true
-systemctl status ome --no-pager -l || true
 '
-    echo -e "${GREEN}oni (Mycelium Live) upgraded${NC}"
+    echo -e "${GREEN}hyphae upgraded${NC}"
+}
+
+upgrade_ergo() {
+    echo -e "${CYAN}Upgrading ergo...${NC}"
+    echo "ergo is a pre-built binary. To update:"
+    echo "  1. Download new release from https://github.com/ergochat/ergo/releases"
+    echo "  2. Copy binary into container: machinectl copy-to ergo /path/to/ergo /usr/local/bin/ergo"
+    echo "  3. Restart: nsrun ergo 'systemctl restart app'"
+    echo ""
+    echo "To reload config without upgrading:"
+    nsrun ergo 'systemctl restart app'
+    echo -e "${GREEN}ergo config reloaded${NC}"
+}
+
+upgrade_bitcoinknots() {
+    echo -e "${CYAN}Restarting bitcoinknots...${NC}"
+    nsrun bitcoinknots 'systemctl restart app && sleep 3 && systemctl status app --no-pager -l || true'
+    echo -e "${GREEN}bitcoinknots restarted${NC}"
+}
+
+upgrade_cln() {
+    echo -e "${CYAN}Restarting Core Lightning...${NC}"
+    nsrun cln 'systemctl restart app && sleep 3 && systemctl status app --no-pager -l || true'
+    echo -e "${GREEN}cln restarted${NC}"
+}
+
+upgrade_lnbits() {
+    echo -e "${CYAN}Upgrading lnbits...${NC}"
+    nsrun lnbits '
+cd /app && git pull origin main
+poetry install 2>/dev/null || pip install -r requirements.txt 2>/dev/null || true
+systemctl restart app
+sleep 2
+systemctl status app --no-pager -l || true
+'
+    echo -e "${GREEN}lnbits upgraded${NC}"
+}
+
+upgrade_keydb() {
+    echo -e "${CYAN}Restarting keydb...${NC}"
+    nsrun keydb 'systemctl restart app && sleep 2 && systemctl status app --no-pager -l || true'
+    echo -e "${GREEN}keydb restarted${NC}"
 }
 
 # ─── Interactive mode ───
@@ -211,7 +254,7 @@ if [ -z "$1" ]; then
     echo ""
 
     # Check which containers are running
-    for svc in relaycreator ribbit mycelium rstate oni strfry haproxy coinos; do
+    for svc in relaycreator ribbit mycelium rstate strfry haproxy oni hyphae ergo coinos bitcoinknots cln lnbits keydb; do
         if container_running "$svc"; then
             echo -e "  ${GREEN}●${NC} $svc"
         else
@@ -232,17 +275,23 @@ fi
 REBUILD=${2:-}
 
 case "$SERVICE" in
-    relaycreator) upgrade_relaycreator ;;
-    ribbit)       upgrade_ribbit ;;
-    mycelium)     upgrade_mycelium ;;
-    rstate)       upgrade_rstate ;;
-    strfry)       upgrade_strfry "$REBUILD" ;;
-    haproxy)      upgrade_haproxy ;;
-    coinos)       upgrade_coinos ;;
-    oni)          upgrade_oni ;;
+    relaycreator)  upgrade_relaycreator ;;
+    ribbit)        upgrade_ribbit ;;
+    mycelium)      upgrade_mycelium ;;
+    rstate)        upgrade_rstate ;;
+    strfry)        upgrade_strfry "$REBUILD" ;;
+    haproxy)       upgrade_haproxy ;;
+    coinos)        upgrade_coinos ;;
+    oni)           upgrade_oni "$REBUILD" ;;
+    hyphae)        upgrade_hyphae ;;
+    ergo)          upgrade_ergo ;;
+    bitcoinknots)  upgrade_bitcoinknots ;;
+    cln)           upgrade_cln ;;
+    lnbits)        upgrade_lnbits ;;
+    keydb)         upgrade_keydb ;;
     *)
         echo -e "${RED}Unknown service: $SERVICE${NC}"
-        echo "Available: relaycreator, ribbit, mycelium, rstate, oni, strfry, haproxy, coinos"
+        echo "Available: relaycreator, ribbit, mycelium, rstate, strfry, haproxy, coinos, oni, hyphae, ergo, bitcoinknots, cln, lnbits, keydb"
         exit 1
         ;;
 esac

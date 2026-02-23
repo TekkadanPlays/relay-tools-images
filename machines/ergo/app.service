@@ -6,13 +6,10 @@ Wants=network.target
 ExecStart=/usr/local/bin/ergo run --conf /data/ircd.yaml
 WorkingDirectory=/data
 Restart=always
-RestartSec=3
 User=root
 Type=simple
 TimeoutStopSec=5
 KillMode=process
-StartLimitBurst=10
-StartLimitIntervalSec=60
 
 [Install]
 WantedBy=multi-user.target

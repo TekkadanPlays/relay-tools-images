@@ -28,7 +28,7 @@ server:
     check-ident: false
     coerce-ident: '~u'
 
-    motd: /data/ircd.motd
+    motd: ircd.motd
     motd-formatting: true
 
     idle-timeouts:
@@ -130,11 +130,6 @@ accounts:
         auto-away: "opt-in"
         always-on-expiration: 90d
 
-# Channel naming convention:
-#   #lobby              — public lobby, auto-joined by all users
-#   #live-<stream>      — per-stream chat (created/destroyed by live.mycelium.social)
-#   #relay-<domain>     — per-relay chat for NIP-42 authenticated relay operators
-#   #<custom>           — user-created channels
 channels:
     default-modes: +ntC
     max-channels-per-client: 100
@@ -142,7 +137,7 @@ channels:
     registration:
         enabled: true
         operator-only: false
-        max-channels-per-account: 25
+        max-channels-per-account: 15
     list-delay: 0s
     invite-expiration: 24h
     auto-join:
@@ -190,10 +185,10 @@ logging:
 debug:
     recover-from-errors: true
 
-lock-file: "/data/ircd.lock"
+lock-file: "ircd.lock"
 
 datastore:
-    path: /data/ircd.db
+    path: ircd.db
     autoupgrade: true
     mysql:
         enabled: false
@@ -201,7 +196,7 @@ datastore:
 languages:
     enabled: true
     default: en
-    path: /data/languages
+    path: languages
 
 limits:
     nicklen: 32

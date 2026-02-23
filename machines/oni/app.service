@@ -1,16 +1,10 @@
 [Unit]
-Description=Mycelium Live Web Server (live.mycelium.social)
+Description=Oni Streaming Server (live.mycelium.social)
 Wants=network.target
-After=ome.service
 
 [Service]
-ExecStart=/usr/local/bin/bun run /app/live/server.ts
-WorkingDirectory=/app/live
-Environment=PORT=8085
-Environment=OME_API_HOST=127.0.0.1
-Environment=OME_API_PORT=8081
-Environment=OME_API_USER=admin
-Environment=OME_API_PASS=admin
+ExecStart=/app/oni -webserverport 8085 -webserverip 127.0.0.1 -rtmpport 1935
+WorkingDirectory=/app
 Restart=always
 User=root
 Type=simple

@@ -1,62 +1,39 @@
 #!/usr/bin/bash
-# Ergo IRC server — install into systemd-nspawn container
-# Ergo listens on 127.0.0.1:6667 (plaintext, loopback only)
-# Hyphae connects to it via raw TCP from its own container
+# get paths for scripts, the repo parent dir and app name
 SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 APP="$(basename $SD)"
 RD="$(dirname "$SD")"
 PASSWORD=creator
 echo $PASSWORD>$RD/$APP.passwd
-
-# Create container from base Debian image
 cp -rfpu $RD/debian /var/lib/machines/$APP
-
-# Create persistent data directory on host
+mkdir -p /var/lib/machines/$APP/data
 mkdir -p /srv/ergo
-
-# Copy nspawn config
 cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
 sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
-
-# Copy service file into container
 cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
 sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
-
-# Copy Ergo config + MOTD to persistent data dir
-cp $SD/ircd.yaml /srv/ergo/ircd.yaml
-cp $SD/ircd.motd /srv/ergo/ircd.motd
-sed -i 's/\r$//' /srv/ergo/ircd.yaml
-sed -i 's/\r$//' /srv/ergo/ircd.motd
-
-# Create languages directory on host (bind-mounted to /data/languages in container)
-mkdir -p /srv/ergo/languages
-
-# Install Ergo binary inside the container
-ERGO_VERSION="2.16.0"
-ERGO_URL="https://github.com/ergochat/ergo/releases/download/v${ERGO_VERSION}/ergo-${ERGO_VERSION}-linux-x86_64.tar.gz"
-
 systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	echo -e "$PASSWORD\n$PASSWORD" | passwd
 	echo "$APP">/etc/hostname
+
+	export DEBIAN_FRONTEND=noninteractive
 	apt update
-	apt -y install curl ca-certificates
-	# Download and install Ergo
-	curl -fsSL "$ERGO_URL" -o /tmp/ergo.tar.gz
-	if [ ! -f /tmp/ergo.tar.gz ]; then
-		echo "ERROR: Failed to download Ergo"
-		exit 1
-	fi
+	apt -y install --no-install-suggests wget
+
+	# Install Ergo IRC server (pre-built binary)
+	ERGO_VERSION=2.14.0
+	ARCH=\$(uname -m)
+	case \$ARCH in
+		aarch64|arm64) ERGO_ARCH="linux-arm64" ;;
+		x86_64) ERGO_ARCH="linux-amd64" ;;
+		*) echo "Unsupported arch: \$ARCH"; exit 1 ;;
+	esac
+	wget -q "https://github.com/ergochat/ergo/releases/download/v\${ERGO_VERSION}/ergo-\${ERGO_VERSION}-\${ERGO_ARCH}.tar.gz" -O /tmp/ergo.tar.gz
 	tar xzf /tmp/ergo.tar.gz -C /tmp
-	# Copy binary
-	cp /tmp/ergo-${ERGO_VERSION}-linux-x86_64/ergo /usr/local/bin/ergo
+	cp /tmp/ergo-\${ERGO_VERSION}-\${ERGO_ARCH}/ergo /usr/local/bin/ergo
 	chmod +x /usr/local/bin/ergo
-	# Copy default language files BEFORE cleanup
-	mkdir -p /data/languages
-	cp -r /tmp/ergo-${ERGO_VERSION}-linux-x86_64/languages/* /data/languages/ 2>/dev/null || true
-	rm -rf /tmp/ergo*
+	rm -rf /tmp/ergo* 
+
 	systemctl enable app
 EOF
 systemctl stop systemd-nspawn@$APP
-echo "Ergo installed. Start with: machinectl start $APP"
-echo "Config at: /srv/ergo/ircd.yaml"
-echo "Don't forget to set the oper password: machinectl shell $APP /usr/local/bin/ergo genpasswd"

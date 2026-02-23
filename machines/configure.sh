@@ -52,10 +52,15 @@ else
 systemd-nspawn --pipe -M keys-certs-manager /bin/bash << EOF
     mkdir -p /etc/haproxy/certs
 
+    # Build domain list based on enabled services
+    CERT_DOMAINS="-d $MYDOMAIN -d app.$MYDOMAIN"
+    [ "${HYPHAE_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d chat.$MYDOMAIN"
+    [ "${ONI_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d live.$MYDOMAIN"
+
     if [ -z "$MYEMAIL" ]; then
-        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" -d "$MYDOMAIN" -d "app.$MYDOMAIN" -d "live.$MYDOMAIN" -d "chat.$MYDOMAIN" --agree-tos --register-unsafely-without-email --standalone --preferred-challenges http --non-interactive
+        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" $CERT_DOMAINS --agree-tos --register-unsafely-without-email --standalone --preferred-challenges http --non-interactive
     else 
-        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" -d "$MYDOMAIN" -d "app.$MYDOMAIN" -d "live.$MYDOMAIN" -d "chat.$MYDOMAIN" --agree-tos -m "$MYEMAIL" --standalone --preferred-challenges http --non-interactive
+        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" $CERT_DOMAINS --agree-tos -m "$MYEMAIL" --standalone --preferred-challenges http --non-interactive
     fi
 
     # haproxy needs one file (write to bind mount so haproxy container can see it)
@@ -204,6 +209,44 @@ CACHE_TTL=300
 EOF
     machinectl start rstate
     echo "rstate relay discovery API started on port 3100"
+fi
+
+# ─── OPTIONAL: Oni live streaming ───
+if [ "${ONI_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up Oni live streaming ==="
+    mkdir -p /srv/oni
+    machinectl start oni
+    echo "Oni started (auto-deploys on first boot via deploy.timer)"
+fi
+
+# ─── OPTIONAL: Ergo IRC server ───
+if [ "${ERGO_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up Ergo IRC server ==="
+    mkdir -p /srv/ergo
+    # Copy default config files to bind mount
+    SD="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    cp "$SD/ergo/ircd.yaml" /srv/ergo/ircd.yaml
+    cp "$SD/ergo/ircd.motd" /srv/ergo/ircd.motd
+    # Replace domain placeholder if present
+    sed -i "s/mycelium.social/$MYDOMAIN/g" /srv/ergo/ircd.yaml
+    sed -i "s/mycelium.social/$MYDOMAIN/g" /srv/ergo/ircd.motd
+    machinectl start ergo
+    echo "Ergo IRC server started on 127.0.0.1:6667"
+fi
+
+# ─── OPTIONAL: Hyphae IRC web client ───
+if [ "${HYPHAE_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up Hyphae IRC web client ==="
+    mkdir -p /srv/hyphae
+    cat << EOF > /srv/hyphae/.env
+PORT=3200
+NODE_ENV=production
+IRC_HOST=127.0.0.1
+IRC_PORT=6667
+DOMAIN=$MYDOMAIN
+EOF
+    machinectl start hyphae
+    echo "Hyphae IRC web client started on port 3200"
 fi
 
 # Configure haproxy management daemon (cookiecutter)
