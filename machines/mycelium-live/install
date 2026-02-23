@@ -14,6 +14,7 @@ cp $SD/app.service /var/lib/machines/$APP/lib/systemd/system/app.service
 cp $SD/deploy.service /var/lib/machines/$APP/lib/systemd/system/deploy.service
 cp $SD/deploy.timer /var/lib/machines/$APP/lib/systemd/system/deploy.timer
 cp $SD/deploy.sh /var/lib/machines/$APP/usr/local/bin/deploy.sh
+chmod +x /var/lib/machines/$APP/usr/local/bin/deploy.sh
 # Strip Windows CRLF line endings
 sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/app.service
 sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/deploy.service
