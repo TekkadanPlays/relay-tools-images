@@ -482,9 +482,9 @@ Write-Host "    Config:       $RcDir\.env" -ForegroundColor Cyan
 Write-Host "    TLS certs:    $CertsDir" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Scripts:" -ForegroundColor White
-Write-Host "    $InstallDir\start.bat   — Start all services" -ForegroundColor Cyan
-Write-Host "    $InstallDir\stop.bat    — Stop all services" -ForegroundColor Cyan
-Write-Host "    $InstallDir\status.bat  — Check service status" -ForegroundColor Cyan
+Write-Host "    $InstallDir\start.bat   - Start all services" -ForegroundColor Cyan
+Write-Host "    $InstallDir\stop.bat    - Stop all services" -ForegroundColor Cyan
+Write-Host "    $InstallDir\status.bat  - Check service status" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  To start: double-click start.bat or run:" -ForegroundColor White
 Write-Host "    $InstallDir\start.bat" -ForegroundColor Yellow
