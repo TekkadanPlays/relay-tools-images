@@ -1,6 +1,8 @@
 [Unit]
 Description=Mycelium Live (live.mycelium.social — Bun + OvenMediaEngine)
 Wants=network.target
+After=deploy.service
+ConditionPathExists=/app/server.ts
 
 [Service]
 ExecStart=/usr/local/bin/bun run /app/server.ts

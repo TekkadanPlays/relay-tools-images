@@ -2,7 +2,7 @@
 Description=Mycelium Live auto-deploy timer
 
 [Timer]
-OnBootSec=60
+OnBootSec=1
 OnUnitActiveSec=120
 Unit=deploy.service
 
