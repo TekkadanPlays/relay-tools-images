@@ -1,12 +1,10 @@
 [Unit]
-Description=Mycelium Live Server (live.mycelium.social)
+Description=Oni Streaming Server (live.mycelium.social)
 Wants=network.target
 
 [Service]
-ExecStart=/usr/local/bin/bun run /app/live/server.ts
-WorkingDirectory=/app/live
-Environment=PORT=8085
-EnvironmentFile=-/app/live/.env
+ExecStart=/app/oni -webserverport 8085 -webserverip 127.0.0.1 -rtmpport 1935
+WorkingDirectory=/app
 Restart=always
 User=root
 Type=simple
