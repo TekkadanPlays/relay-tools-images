@@ -17,32 +17,32 @@
 
 $ErrorActionPreference = "Stop"
 
-# ─── Colors ───
+# --- Colors ---
 function Write-Header($text) {
     Write-Host ""
-    Write-Host ("━" * 78) -ForegroundColor Cyan
+    Write-Host ("=" * 78) -ForegroundColor Cyan
     Write-Host "  $text" -ForegroundColor White -NoNewline
     Write-Host "" -ForegroundColor White
-    Write-Host ("━" * 78) -ForegroundColor Cyan
+    Write-Host ("=" * 78) -ForegroundColor Cyan
     Write-Host ""
 }
 
 function Write-Section($text) {
     Write-Host ""
-    Write-Host "── $text ──" -ForegroundColor Blue
+    Write-Host "-- $text --" -ForegroundColor Blue
     Write-Host ""
 }
 
 function Write-Ok($text) {
-    Write-Host "  ● $text" -ForegroundColor Green
+    Write-Host "  [OK] $text" -ForegroundColor Green
 }
 
 function Write-Warn($text) {
-    Write-Host "  ▲ $text" -ForegroundColor Yellow
+    Write-Host "  [!!] $text" -ForegroundColor Yellow
 }
 
 function Write-Err($text) {
-    Write-Host "  ✗ $text" -ForegroundColor Red
+    Write-Host "  [XX] $text" -ForegroundColor Red
 }
 
 function Confirm-Action($prompt, $default = "y") {
@@ -56,28 +56,28 @@ function Confirm-Action($prompt, $default = "y") {
     return $answer -match "^[Yy]"
 }
 
-# ─── Check admin ───
+# --- Check admin ---
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Err "This script must be run as Administrator."
-    Write-Host "Right-click PowerShell → Run as Administrator, then re-run this script."
+    Write-Host "Right-click PowerShell -> Run as Administrator, then re-run this script."
     exit 1
 }
 
-# ─── Welcome ───
+# --- Welcome ---
 Write-Header "relay-tools local installer (Windows)"
 
 Write-Host "  This installer sets up relay-tools for local/personal use on Windows."
 Write-Host "  strfry runs inside WSL2 (Ubuntu). Everything else runs natively."
 Write-Host ""
 Write-Host "  Components:"
-Write-Ok "MariaDB        — database (native Windows)"
-Write-Ok "strfry         — Nostr relay engine (WSL2 Ubuntu)"
-Write-Ok "relaycreator   — API server + admin panel (native Node.js)"
-Write-Ok "mkcert         — locally-trusted TLS certificates"
+Write-Ok "MariaDB        - database (native Windows)"
+Write-Ok "strfry         - Nostr relay engine (WSL2 Ubuntu)"
+Write-Ok "relaycreator   - API server + admin panel (native Node.js)"
+Write-Ok "mkcert         - locally-trusted TLS certificates"
 Write-Host ""
 
-# ─── Configuration ───
+# --- Configuration ---
 Write-Section "Configuration"
 
 $InstallDir = "$env:USERPROFILE\relay-tools"
@@ -99,12 +99,12 @@ if (-not (Confirm-Action "Proceed with installation?")) {
     exit 0
 }
 
-# ─── Create directories ───
+# --- Create directories ---
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 New-Item -ItemType Directory -Force -Path $CertsDir | Out-Null
 
-# ─── Install package managers ───
+# --- Install package managers ---
 Write-Section "Checking package managers"
 
 # Check for winget
@@ -116,7 +116,7 @@ if (-not $hasWinget) {
 }
 Write-Ok "winget available"
 
-# ─── Install Git ───
+# --- Install Git ---
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Write-Host "  Installing Git..."
     winget install --id Git.Git -e --accept-source-agreements --accept-package-agreements
@@ -124,7 +124,7 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 }
 Write-Ok "Git: $(git --version)"
 
-# ─── Install Node.js ───
+# --- Install Node.js ---
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "  Installing Node.js 20 LTS..."
     winget install --id OpenJS.NodeJS.LTS -e --accept-source-agreements --accept-package-agreements
@@ -133,15 +133,15 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 }
 Write-Ok "Node.js: $(node --version)"
 
-# ─── Install Bun ───
+# --- Install Bun ---
 if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
     Write-Host "  Installing Bun..."
-    irm bun.sh/install.ps1 | iex
+    Invoke-RestMethod bun.sh/install.ps1 | Invoke-Expression
     $env:PATH = "$env:USERPROFILE\.bun\bin;$env:PATH"
 }
 Write-Ok "Bun: $(bun --version)"
 
-# ─── Install MariaDB ───
+# --- Install MariaDB ---
 Write-Section "Installing MariaDB"
 
 $mariadbInstalled = Get-Command mysql -ErrorAction SilentlyContinue
@@ -205,7 +205,7 @@ FLUSH PRIVILEGES;
 
 $DatabaseUrl = "mysql://${DbUser}:${DbPass}@localhost:3306/${DbName}"
 
-# ─── Install mkcert ───
+# --- Install mkcert ---
 Write-Section "Setting up TLS certificates"
 
 if (-not (Get-Command mkcert -ErrorAction SilentlyContinue)) {
@@ -234,7 +234,7 @@ if (-not (Test-Path "$CertsDir\localhost.pem")) {
     Write-Host "  TLS certificates already exist."
 }
 
-# ─── Setup WSL2 + strfry ───
+# --- Setup WSL2 + strfry ---
 Write-Section "Setting up strfry via WSL2"
 
 $wslInstalled = $false
@@ -258,7 +258,7 @@ if (-not $wslInstalled) {
 Write-Ok "WSL2 Ubuntu available"
 
 # Build strfry inside WSL
-$strfryExists = wsl -d Ubuntu -- test -f /usr/local/bin/strfry 2>$null
+wsl -d Ubuntu -- test -f /usr/local/bin/strfry 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  Building strfry inside WSL2 (this takes a few minutes)..."
 
@@ -358,7 +358,7 @@ events {
 '@
 $strfryConf | Set-Content "$DataDir\strfry\strfry.conf" -Force
 
-# ─── Install relaycreator ───
+# --- Install relaycreator ---
 Write-Section "Installing relaycreator"
 
 $RcDir = "$InstallDir\relaycreator"
@@ -417,7 +417,7 @@ bun run build
 Pop-Location
 Write-Ok "Web frontend built"
 
-# ─── Create convenience scripts ───
+# --- Create convenience scripts ---
 Write-Section "Creating convenience scripts"
 
 # Start script
@@ -468,7 +468,7 @@ pause
 
 Write-Ok "Convenience scripts created"
 
-# ─── Done ───
+# --- Done ---
 Write-Header "Local Installation Complete!"
 
 Write-Host "  relay-tools is ready!" -ForegroundColor White
