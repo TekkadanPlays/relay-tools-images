@@ -169,6 +169,37 @@ if (-not $mariadbInstalled) {
     Write-Ok "MariaDB already installed"
 }
 
+# Ensure MariaDB service is running
+$mariadbSvc = Get-Service -Name "MariaDB" -ErrorAction SilentlyContinue
+if (-not $mariadbSvc) {
+    # Try wildcard match (service name varies by version)
+    $mariadbSvc = Get-Service | Where-Object { $_.Name -match "MariaDB|MySQL" } | Select-Object -First 1
+}
+if ($mariadbSvc) {
+    if ($mariadbSvc.Status -ne "Running") {
+        Write-Host "  Starting MariaDB service..."
+        Start-Service $mariadbSvc.Name
+        Start-Sleep -Seconds 3
+    }
+    Write-Ok "MariaDB service running"
+} else {
+    Write-Warn "MariaDB service not found. You may need to start it manually."
+    Write-Host "  Try: net start MariaDB"
+}
+
+# Wait for MariaDB to accept connections (up to 15 seconds)
+$mysqlReady = $false
+for ($i = 0; $i -lt 15; $i++) {
+    try {
+        $null = mysql -u root -e "SELECT 1" 2>$null
+        if ($LASTEXITCODE -eq 0) { $mysqlReady = $true; break }
+    } catch {}
+    Start-Sleep -Seconds 1
+}
+if (-not $mysqlReady) {
+    Write-Warn "MariaDB is not responding on localhost. Database setup may fail."
+}
+
 # Create database
 $DbName = "relaycreator"
 $DbUser = "relaycreator"
@@ -215,17 +246,22 @@ if (-not (Get-Command mkcert -ErrorAction SilentlyContinue)) {
     $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User")
 }
 
-# Install local CA
+# Install local CA (mkcert prints emoji to stderr which PowerShell treats as error)
 Write-Host "  Installing local CA root certificate..."
-mkcert -install 2>$null
+$ErrorActionPreference = "Continue"
+mkcert -install 2>&1 | Out-Null
+$ErrorActionPreference = "Stop"
+Write-Ok "Local CA installed"
 
 # Generate certs
 if (-not (Test-Path "$CertsDir\localhost.pem")) {
     Write-Host "  Generating TLS certificate for localhost..."
     Push-Location $CertsDir
+    $ErrorActionPreference = "Continue"
     mkcert -cert-file localhost.pem -key-file localhost-key.pem `
         localhost 127.0.0.1 "::1" `
         "*.localhost" relay.localhost app.localhost
+    $ErrorActionPreference = "Stop"
     # Create bundle
     Get-Content localhost.pem, localhost-key.pem | Set-Content bundle.pem
     Pop-Location
