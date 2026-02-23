@@ -149,21 +149,21 @@ if (-not $mariadbInstalled) {
     Write-Host "  Installing MariaDB..."
     winget install --id MariaDB.Server -e --accept-source-agreements --accept-package-agreements
 
-    # Add MariaDB to PATH
-    $mariadbPaths = @(
-        "${env:ProgramFiles}\MariaDB 11.4\bin",
-        "${env:ProgramFiles}\MariaDB 11.3\bin",
-        "${env:ProgramFiles}\MariaDB 11.2\bin",
-        "${env:ProgramFiles}\MariaDB 11.1\bin",
-        "${env:ProgramFiles}\MariaDB 11.0\bin",
-        "${env:ProgramFiles}\MariaDB 10.11\bin"
-    )
-    foreach ($p in $mariadbPaths) {
-        if (Test-Path $p) {
-            $env:PATH = "$p;$env:PATH"
-            break
+    # Add MariaDB to PATH (find any installed version dynamically)
+    $mariadbBin = Get-ChildItem "${env:ProgramFiles}\MariaDB *\bin" -Directory -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending | Select-Object -First 1
+    if ($mariadbBin) {
+        $env:PATH = "$($mariadbBin.FullName);$env:PATH"
+    } else {
+        # Also check Program Files (x86)
+        $mariadbBin = Get-ChildItem "${env:ProgramFiles(x86)}\MariaDB *\bin" -Directory -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | Select-Object -First 1
+        if ($mariadbBin) {
+            $env:PATH = "$($mariadbBin.FullName);$env:PATH"
         }
     }
+    # Refresh PATH from registry in case winget updated it
+    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";" + $env:PATH
     Write-Ok "MariaDB installed"
 } else {
     Write-Ok "MariaDB already installed"
