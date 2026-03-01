@@ -53,7 +53,7 @@ nsrun() {
 upgrade_relaycreator() {
     echo -e "${CYAN}Upgrading relaycreator...${NC}"
     nsrun relaycreator '
-cd /app && git fetch origin && git reset --hard origin/main
+cd /app && git fetch origin && git reset --hard origin/local
 systemctl stop app
 
 # Build Express API server
