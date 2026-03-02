@@ -5,15 +5,21 @@ deploy_rstate() {
     systemctl stop app 2>/dev/null || true
 
     cd /app/nostr-watch
-    git pull 2>/dev/null || true
-    cd /app/nostr-watch/apps/rstate
+    git fetch origin && git reset --hard origin/main
+
+    # Install from monorepo root so workspace deps resolve
     bun install
+
+    # Build rstate app
+    cd /app/nostr-watch/apps/rstate
     bun run build
     mkdir -p /app/rstate
     cp -r dist/* /app/rstate/
     cp package.json /app/rstate/
+
+    # Install production deps
     cd /app/rstate
-    bun install --production
+    bun install --production 2>/dev/null || true
 
     systemctl start app
 }

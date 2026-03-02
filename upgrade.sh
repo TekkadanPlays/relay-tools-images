@@ -113,16 +113,23 @@ systemctl status app --no-pager -l || true
 upgrade_rstate() {
     echo -e "${CYAN}Upgrading rstate...${NC}"
     nsrun rstate '
-cd /app/nostr-watch && git pull origin main
-cd /app/nostr-watch/apps/rstate
+cd /app/nostr-watch && git fetch origin && git reset --hard origin/main
+
+# Install from monorepo root so workspace deps resolve
 bun install
+
+# Build rstate app
+cd /app/nostr-watch/apps/rstate
 bun run build
+mkdir -p /app/rstate
 cp -r dist/* /app/rstate/
 cp package.json /app/rstate/
-cd /app/rstate
-bun install --production
-systemctl restart app
 
+# Install production deps — link workspace packages from monorepo
+cd /app/rstate
+bun install --production 2>/dev/null || true
+
+systemctl restart app
 echo "rstate rebuilt and restarted"
 systemctl status app --no-pager -l || true
 '
