@@ -15,7 +15,7 @@
     Usage: .\install-local.ps1
 #>
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 # --- Colors ---
 function Write-Header($text) {
@@ -144,60 +144,88 @@ Write-Ok "Bun: $(bun --version)"
 # --- Install MariaDB ---
 Write-Section "Installing MariaDB"
 
-$mariadbInstalled = Get-Command mysql -ErrorAction SilentlyContinue
-if (-not $mariadbInstalled) {
-    Write-Host "  Installing MariaDB..."
-    winget install --id MariaDB.Server -e --accept-source-agreements --accept-package-agreements
-
-    # Add MariaDB to PATH (find any installed version dynamically)
+# Install MariaDB if mysql.exe not on PATH
+if (-not (Get-Command mysql -ErrorAction SilentlyContinue)) {
+    # Check if already installed but not on PATH
     $mariadbBin = Get-ChildItem "${env:ProgramFiles}\MariaDB *\bin" -Directory -ErrorAction SilentlyContinue |
         Sort-Object Name -Descending | Select-Object -First 1
+    if (-not $mariadbBin) {
+        Write-Host "  Installing MariaDB via winget..."
+        winget install --id MariaDB.Server -e --accept-source-agreements --accept-package-agreements
+        $mariadbBin = Get-ChildItem "${env:ProgramFiles}\MariaDB *\bin" -Directory -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | Select-Object -First 1
+    }
     if ($mariadbBin) {
         $env:PATH = "$($mariadbBin.FullName);$env:PATH"
+        Write-Ok "MariaDB found at $($mariadbBin.FullName)"
     } else {
-        # Also check Program Files (x86)
-        $mariadbBin = Get-ChildItem "${env:ProgramFiles(x86)}\MariaDB *\bin" -Directory -ErrorAction SilentlyContinue |
-            Sort-Object Name -Descending | Select-Object -First 1
-        if ($mariadbBin) {
-            $env:PATH = "$($mariadbBin.FullName);$env:PATH"
-        }
+        Write-Err "MariaDB installation failed. Install manually from https://mariadb.org/download/"
+        exit 1
     }
-    # Refresh PATH from registry in case winget updated it
-    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User") + ";" + $env:PATH
-    Write-Ok "MariaDB installed"
 } else {
-    Write-Ok "MariaDB already installed"
+    Write-Ok "MariaDB already on PATH"
 }
 
-# Ensure MariaDB service is running
-$mariadbSvc = Get-Service -Name "MariaDB" -ErrorAction SilentlyContinue
+# Find the MariaDB install root (parent of bin/)
+$mysqldPath = (Get-Command mysqld -ErrorAction SilentlyContinue).Source
+if (-not $mysqldPath) {
+    $mysqldPath = (Get-Command mysql -ErrorAction SilentlyContinue).Source
+}
+$mariadbRoot = Split-Path (Split-Path $mysqldPath)
+$mariadbDataDir = "$mariadbRoot\data"
+
+# Register MariaDB as a Windows service if not already registered
+$mariadbSvc = Get-Service | Where-Object { $_.Name -match "MariaDB|MySQL" } | Select-Object -First 1
 if (-not $mariadbSvc) {
-    # Try wildcard match (service name varies by version)
-    $mariadbSvc = Get-Service | Where-Object { $_.Name -match "MariaDB|MySQL" } | Select-Object -First 1
-}
-if ($mariadbSvc) {
-    if ($mariadbSvc.Status -ne "Running") {
-        Write-Host "  Starting MariaDB service..."
-        Start-Service $mariadbSvc.Name
-        Start-Sleep -Seconds 3
+    Write-Host "  Registering MariaDB as a Windows service..."
+
+    # Initialize data directory if empty/missing
+    if (-not (Test-Path "$mariadbDataDir\mysql")) {
+        Write-Host "  Initializing MariaDB data directory..."
+        & mysqld --initialize-insecure --datadir="$mariadbDataDir" 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            # Try mysql_install_db instead (older MariaDB style)
+            & mysql_install_db --datadir="$mariadbDataDir" 2>&1 | Out-Null
+        }
+        Write-Ok "Data directory initialized"
     }
-    Write-Ok "MariaDB service running"
-} else {
-    Write-Warn "MariaDB service not found. You may need to start it manually."
-    Write-Host "  Try: net start MariaDB"
+
+    # Install the service
+    & mysqld --install MariaDB 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "MariaDB service registered"
+    } else {
+        Write-Err "Failed to register MariaDB service. Are you running as Administrator?"
+        exit 1
+    }
+    $mariadbSvc = Get-Service -Name "MariaDB" -ErrorAction SilentlyContinue
 }
 
-# Wait for MariaDB to accept connections (up to 15 seconds)
+# Start the service
+if ($mariadbSvc -and $mariadbSvc.Status -ne "Running") {
+    Write-Host "  Starting MariaDB service..."
+    Start-Service $mariadbSvc.Name
+    Start-Sleep -Seconds 3
+}
+Write-Ok "MariaDB service: $($mariadbSvc.Status)"
+
+# Wait for MariaDB to accept connections (up to 20 seconds)
+Write-Host "  Waiting for MariaDB to accept connections..."
 $mysqlReady = $false
-for ($i = 0; $i -lt 15; $i++) {
+for ($i = 0; $i -lt 20; $i++) {
     try {
         $null = mysql -u root -e "SELECT 1" 2>$null
         if ($LASTEXITCODE -eq 0) { $mysqlReady = $true; break }
     } catch {}
     Start-Sleep -Seconds 1
 }
-if (-not $mysqlReady) {
-    Write-Warn "MariaDB is not responding on localhost. Database setup may fail."
+if ($mysqlReady) {
+    Write-Ok "MariaDB accepting connections"
+} else {
+    Write-Err "MariaDB is not responding after 20 seconds."
+    Write-Host "  Check: Get-Service MariaDB | Format-List *"
+    Write-Host "  Logs:  Get-EventLog -LogName Application -Source MariaDB -Newest 10"
+    exit 1
 }
 
 # Create database
@@ -222,16 +250,15 @@ FLUSH PRIVILEGES;
     $sql | mysql -u root
     Write-Ok "Database created"
 } else {
-    Write-Host "  Database already exists."
-    # Try to read existing password
-    $envFile = "$InstallDir\relaycreator\.env"
-    if (Test-Path $envFile) {
-        $existingUrl = (Get-Content $envFile | Where-Object { $_ -match "^DATABASE_URL=" }) -replace "^DATABASE_URL=", ""
-        if ($existingUrl -match "mysql://[^:]+:([^@]+)@") {
-            $DbPass = $Matches[1]
-            Write-Host "  Using existing credentials."
-        }
-    }
+    Write-Host "  Database already exists. Resetting credentials..."
+    $sql = @"
+CREATE USER IF NOT EXISTS '$DbUser'@'localhost' IDENTIFIED BY '$DbPass';
+ALTER USER '$DbUser'@'localhost' IDENTIFIED BY '$DbPass';
+GRANT ALL PRIVILEGES ON $DbName.* TO '$DbUser'@'localhost';
+FLUSH PRIVILEGES;
+"@
+    $sql | mysql -u root
+    Write-Ok "Database credentials reset"
 }
 
 $DatabaseUrl = "mysql://${DbUser}:${DbPass}@localhost:3306/${DbName}"
@@ -250,7 +277,7 @@ if (-not (Get-Command mkcert -ErrorAction SilentlyContinue)) {
 Write-Host "  Installing local CA root certificate..."
 $ErrorActionPreference = "Continue"
 mkcert -install 2>&1 | Out-Null
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 Write-Ok "Local CA installed"
 
 # Generate certs
@@ -261,7 +288,7 @@ if (-not (Test-Path "$CertsDir\localhost.pem")) {
     mkcert -cert-file localhost.pem -key-file localhost-key.pem `
         localhost 127.0.0.1 "::1" `
         "*.localhost" relay.localhost app.localhost
-    $ErrorActionPreference = "Stop"
+    $ErrorActionPreference = "Continue"
     # Create bundle
     Get-Content localhost.pem, localhost-key.pem | Set-Content bundle.pem
     Pop-Location
@@ -275,20 +302,32 @@ Write-Section "Setting up strfry via WSL2"
 
 $wslInstalled = $false
 try {
-    $wslList = wsl --list --quiet 2>$null
-    if ($wslList -match "Ubuntu") { $wslInstalled = $true }
+    # wsl --list outputs UTF-16 with null bytes; normalize it
+    $wslRaw = wsl --list --quiet 2>$null
+    $wslText = ($wslRaw | Out-String) -replace "`0", ""
+    if ($wslText -match "Ubuntu") { $wslInstalled = $true }
 } catch {}
 
 if (-not $wslInstalled) {
     Write-Host "  Installing WSL2 with Ubuntu..."
-    Write-Warn "This may require a restart. Re-run this script after restarting."
-    wsl --install -d Ubuntu --no-launch
-    Write-Host ""
-    Write-Host "  WSL2 Ubuntu is installing. After it finishes:"
-    Write-Host "  1. Open Ubuntu from the Start menu and create a user"
-    Write-Host "  2. Re-run this script to continue setup"
-    Write-Host ""
-    exit 0
+    $ErrorActionPreference = "Continue"
+    wsl --install -d Ubuntu --no-launch 2>&1 | Out-Null
+    $ErrorActionPreference = "Continue"
+
+    # Re-check after install
+    try {
+        $wslRaw = wsl --list --quiet 2>$null
+        $wslText = ($wslRaw | Out-String) -replace "`0", ""
+        if ($wslText -match "Ubuntu") { $wslInstalled = $true }
+    } catch {}
+
+    if (-not $wslInstalled) {
+        Write-Warn "WSL2 may need a restart to finish installing."
+        Write-Host "  1. Restart your computer"
+        Write-Host "  2. Open Ubuntu from the Start menu and create a user"
+        Write-Host "  3. Re-run this script"
+        exit 0
+    }
 }
 
 Write-Ok "WSL2 Ubuntu available"
@@ -298,30 +337,15 @@ wsl -d Ubuntu -- test -f /usr/local/bin/strfry 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  Building strfry inside WSL2 (this takes a few minutes)..."
 
-    $wslScript = @'
-#!/bin/bash
-set -e
-export DEBIAN_FRONTEND=noninteractive
-
-sudo apt-get update -qq
-sudo apt-get install -y -qq git build-essential \
-    libsecp256k1-dev libzstd-dev liblmdb-dev libflatbuffers-dev \
-    libssl-dev zlib1g-dev 2>&1 | tail -1
-
-if [ ! -d /tmp/strfry ]; then
-    git clone https://github.com/hoytech/strfry.git /tmp/strfry
-    cd /tmp/strfry
-    git checkout tags/1.0.4
-    git submodule update --init
-fi
-
-cd /tmp/strfry
-make setup-golpe
-make -j$(nproc)
-sudo cp strfry /usr/local/bin/strfry
-echo "strfry built successfully"
-'@
-    $wslScript | wsl -d Ubuntu -- bash
+    # Write build script to install dir (WSL can access via /mnt/c/)
+    $scriptContent = "#!/bin/bash`nset -e`nexport DEBIAN_FRONTEND=noninteractive`n`napt-get update -qq`napt-get install -y -qq git build-essential libsecp256k1-dev libzstd-dev liblmdb-dev libflatbuffers-dev libssl-dev zlib1g-dev`n`nif [ ! -d /tmp/strfry ]; then`n    git clone https://github.com/hoytech/strfry.git /tmp/strfry`n    cd /tmp/strfry`n    git checkout tags/1.0.4`n    git submodule update --init`nfi`n`ncd /tmp/strfry`nmake setup-golpe`nmake -j`$(nproc)`ncp strfry /usr/local/bin/strfry`necho strfry_built_successfully"
+    $scriptPath = "$InstallDir\build-strfry.sh"
+    [System.IO.File]::WriteAllText($scriptPath, $scriptContent, [System.Text.UTF8Encoding]::new($false))
+    # Convert Windows path to WSL /mnt/c/ path
+    $drive = $scriptPath.Substring(0,1).ToLower()
+    $wslPath = "/mnt/$drive/" + ($scriptPath.Substring(3) -replace '\\','/')
+    # Run as root inside WSL to avoid sudo password prompt
+    wsl -d Ubuntu -u root -- bash $wslPath
     Write-Ok "strfry built in WSL2"
 } else {
     Write-Ok "strfry already built in WSL2"
@@ -401,11 +425,11 @@ $RcDir = "$InstallDir\relaycreator"
 
 if (-not (Test-Path "$RcDir\.git")) {
     Write-Host "  Cloning relaycreator..."
-    git clone https://github.com/TekkadanPlays/relaycreator.git $RcDir
+    git clone -b local https://github.com/TekkadanPlays/relaycreator.git $RcDir
 } else {
     Write-Host "  relaycreator already cloned, pulling latest..."
     Push-Location $RcDir
-    git pull origin main 2>$null
+    git pull origin local 2>$null
     Pop-Location
 }
 
@@ -432,25 +456,35 @@ WALLET_ENABLED=false
 INTERCEPTOR_PORT=9696
 "@
 $envContent | Set-Content "$RcDir\.env"
+# Also copy .env into api-server so Prisma can find DATABASE_URL
+Copy-Item "$RcDir\.env" "$RcDir\api-server\.env" -Force
+# Set DATABASE_URL in current process for Prisma CLI
+$env:DATABASE_URL = $DatabaseUrl
 Write-Ok "relaycreator .env configured"
 
-# Build API server
+# Build API server (npm/npx write warnings to stderr; suppress termination)
 Write-Host "  Building API server..."
 Push-Location "$RcDir\api-server"
-npm install --legacy-peer-deps 2>&1 | Select-Object -Last 3
-npx prisma generate
-npx prisma db push --accept-data-loss 2>$null
-if ($LASTEXITCODE -ne 0) { npx prisma db push }
-npm run build
+$ErrorActionPreference = "Continue"
+npm install --legacy-peer-deps --ignore-scripts 2>&1 | Out-Host
+npx prisma generate 2>&1 | Out-Host
+npx prisma db push --accept-data-loss 2>&1 | Out-Host
+if ($LASTEXITCODE -ne 0) { npx prisma db push 2>&1 | Out-Host }
+npm run build 2>&1 | Out-Host
+$ErrorActionPreference = "Continue"
 Pop-Location
+if ($LASTEXITCODE -ne 0) { Write-Err "API server build failed"; exit 1 }
 Write-Ok "API server built"
 
-# Build web frontend
+# Build web frontend (bun also writes to stderr)
 Write-Host "  Building web frontend..."
 Push-Location "$RcDir\web"
-bun install
-bun run build
+$ErrorActionPreference = "Continue"
+bun install 2>&1 | Out-Host
+bun run build 2>&1 | Out-Host
+$ErrorActionPreference = "Continue"
 Pop-Location
+if ($LASTEXITCODE -ne 0) { Write-Err "Web frontend build failed"; exit 1 }
 Write-Ok "Web frontend built"
 
 # --- Create convenience scripts ---
