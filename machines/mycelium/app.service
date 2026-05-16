@@ -3,11 +3,11 @@ Description=mycelium.social frontend
 Wants=network.target
 
 [Service]
-ExecStart=/usr/local/bin/bun run /app/ribbit/src/server/index.ts
-WorkingDirectory=/app/ribbit
+ExecStart=/usr/local/bin/bun run /app/mycelium/src/server/index.ts
+WorkingDirectory=/app/mycelium
 Restart=always
 User=root
-EnvironmentFile=/app/ribbit/.env
+EnvironmentFile=-/app/mycelium/.env
 Environment=NODE_ENV=production
 Type=simple
 TimeoutStopSec=5

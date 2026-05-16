@@ -98,10 +98,18 @@ upgrade_mycelium() {
     nsrun mycelium '
 cd /app && git pull origin main
 
-# Rebuild frontend
-cd /app/ribbit
+# Migration: repo renamed ribbit/ → mycelium/
+# If the old ribbit/ dir exists and mycelium/ exists from git, swap them
+if [ -d /app/mycelium ] && [ -d /app/ribbit ] && [ ! -L /app/ribbit ]; then
+    echo "Migrating: removing old /app/ribbit, symlinking to /app/mycelium"
+    rm -rf /app/ribbit
+    ln -sf /app/mycelium /app/ribbit
+fi
+
+# Build from the current directory name
+cd /app/mycelium
 bun install
-NODE_ENV=production bun run build
+bun run build
 systemctl restart app
 
 echo "mycelium frontend rebuilt and restarted"
