@@ -1,0 +1,18 @@
+# TLS Certificate Domain List for relay-tools
+# One domain per line. Comments (#) and blank lines are ignored.
+# The cert will cover ALL domains listed here.
+#
+# When adding a new subdomain:
+#   1. Add the DNS A record pointing to your server
+#   2. Add the domain below
+#   3. Run: systemctl start certrenew.service
+#      (or wait for the next automatic run — twice daily)
+#
+# The certrenew script will automatically expand the cert to include
+# any new domains found here that aren't in the current cert.
+
+mycelium.social
+app.mycelium.social
+chat.mycelium.social
+live.mycelium.social
+monitor.mycelium.social
