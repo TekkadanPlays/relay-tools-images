@@ -283,7 +283,9 @@ if [ "${SPOREBOARD_ENABLED:-false}" = "true" ]; then
 PORT=3400
 NODE_ENV=production
 KANBOARD_URL=http://127.0.0.1:8080
-DOMAIN=sporeboard.$MYDOMAIN
+DOMAIN=$MYDOMAIN
+JWT_SECRET=$JWT_SECRET
+ADMIN_NPUB=$DEPLOY_PUBKEY
 EOF
     # Register subdomain for TLS cert
     grep -qxF "sporeboard.$MYDOMAIN" /srv/haproxy/cert-domains.txt 2>/dev/null || echo "sporeboard.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
@@ -304,6 +306,9 @@ if [ "${SPORECHAT_ENABLED:-false}" = "true" ]; then
 PORT=3500
 NODE_ENV=production
 JAM_HOST=meet.$MYDOMAIN
+DOMAIN=$MYDOMAIN
+JWT_SECRET=$JWT_SECRET
+ADMIN_NPUB=$DEPLOY_PUBKEY
 EOF
     cat << EOF > /srv/sporechat/jam/.env
 JAM_HOST=meet.$MYDOMAIN
