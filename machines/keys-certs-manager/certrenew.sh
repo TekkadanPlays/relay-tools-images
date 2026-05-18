@@ -19,9 +19,30 @@ if [ -z "$DOMAIN" ]; then
 fi
 
 CERT_DIR="/etc/haproxy/certs"
-LIVE_DIR="$CERT_DIR/live/$DOMAIN"
 BUNDLE="/srv/haproxy/certs/bundle.pem"
 DOMAIN_LIST="/srv/haproxy/cert-domains.txt"
+
+# ---------------------------------------------------------------------------
+# Find the active cert live directory
+# Certbot may create numbered lineages (mycelium.social-0001, -0002, etc.)
+# We want the most recent one.
+# ---------------------------------------------------------------------------
+
+LIVE_DIR=""
+if [ -d "$CERT_DIR/live" ]; then
+    for d in $(ls -d "$CERT_DIR/live/$DOMAIN"* 2>/dev/null | sort -V | tac); do
+        if [ -f "$d/fullchain.pem" ]; then
+            LIVE_DIR="$d"
+            break
+        fi
+    done
+fi
+
+if [ -n "$LIVE_DIR" ]; then
+    echo "Using cert lineage: $LIVE_DIR"
+else
+    echo "No existing cert found — will issue new cert"
+fi
 
 # ---------------------------------------------------------------------------
 # Build the list of domains the cert should cover
@@ -30,13 +51,11 @@ DOMAIN_LIST="/srv/haproxy/cert-domains.txt"
 DESIRED_DOMAINS=()
 
 if [ -f "$DOMAIN_LIST" ]; then
-    # Read domains from file (skip comments and blank lines)
     while IFS= read -r line; do
         line=$(echo "$line" | sed 's/#.*//' | xargs)
         [ -n "$line" ] && DESIRED_DOMAINS+=("$line")
     done < "$DOMAIN_LIST"
 else
-    # Fallback: just the base domain + app subdomain
     echo "WARNING: $DOMAIN_LIST not found. Using defaults: $DOMAIN, app.$DOMAIN"
     DESIRED_DOMAINS=("$DOMAIN" "app.$DOMAIN")
 fi
@@ -49,13 +68,14 @@ fi
 echo "Desired domains (${#DESIRED_DOMAINS[@]}): ${DESIRED_DOMAINS[*]}"
 
 # ---------------------------------------------------------------------------
-# Check what domains the current cert covers
+# Check cert status: domains covered, expiry
 # ---------------------------------------------------------------------------
 
 CURRENT_SANS=""
 NEEDS_REISSUE=false
+FORCE_RENEWAL=false
 
-if [ -f "$LIVE_DIR/fullchain.pem" ]; then
+if [ -n "$LIVE_DIR" ] && [ -f "$LIVE_DIR/fullchain.pem" ]; then
     CURRENT_SANS=$(openssl x509 -in "$LIVE_DIR/fullchain.pem" -noout -text 2>/dev/null \
         | grep -A1 "Subject Alternative Name" \
         | tail -1 \
@@ -63,22 +83,42 @@ if [ -f "$LIVE_DIR/fullchain.pem" ]; then
         | xargs)
     echo "Current cert SANs: $CURRENT_SANS"
 
-    # Check if every desired domain is in the current cert
+    # Check expiry
+    EXPIRY=$(openssl x509 -in "$LIVE_DIR/fullchain.pem" -noout -enddate 2>/dev/null \
+        | sed 's/notAfter=//')
+    EXPIRY_EPOCH=$(date -d "$EXPIRY" +%s 2>/dev/null || echo "0")
+    NOW_EPOCH=$(date +%s)
+    DAYS_LEFT=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
+    echo "Cert expires: $EXPIRY ($DAYS_LEFT days remaining)"
+
+    if [ "$DAYS_LEFT" -le 0 ]; then
+        echo "Certificate is EXPIRED — forcing renewal"
+        FORCE_RENEWAL=true
+        NEEDS_REISSUE=true
+    elif [ "$DAYS_LEFT" -le 30 ]; then
+        echo "Certificate expires within 30 days — renewal needed"
+        NEEDS_REISSUE=true
+    fi
+
+    # Check if every desired domain is covered
     for d in "${DESIRED_DOMAINS[@]}"; do
         if ! echo "$CURRENT_SANS" | grep -qw "$d"; then
-            echo "Domain '$d' is NOT in current cert — reissue needed"
-            NEEDS_REISSUE=true
-            break
+            PARENT=$(echo "$d" | sed 's/^[^.]*\.//')
+            if ! echo "$CURRENT_SANS" | grep -qw "\*.$PARENT"; then
+                echo "Domain '$d' is NOT in current cert — reissue needed"
+                NEEDS_REISSUE=true
+                FORCE_RENEWAL=true
+                break
+            fi
         fi
     done
 else
-    echo "No existing cert found at $LIVE_DIR — initial issue needed"
+    echo "No existing cert found — initial issue needed"
     NEEDS_REISSUE=true
 fi
 
-# Record the current cert fingerprint for comparison
 BEFORE_FP=""
-if [ -f "$LIVE_DIR/fullchain.pem" ]; then
+if [ -n "$LIVE_DIR" ] && [ -f "$LIVE_DIR/fullchain.pem" ]; then
     BEFORE_FP=$(openssl x509 -noout -fingerprint -in "$LIVE_DIR/fullchain.pem" 2>/dev/null || echo "")
 fi
 
@@ -86,14 +126,18 @@ fi
 # Issue, expand, or renew
 # ---------------------------------------------------------------------------
 
-# Build -d flags
 DOMAIN_FLAGS=""
 for d in "${DESIRED_DOMAINS[@]}"; do
     DOMAIN_FLAGS="$DOMAIN_FLAGS -d $d"
 done
 
 if [ "$NEEDS_REISSUE" = true ]; then
+    EXTRA_FLAGS=""
+    [ "$FORCE_RENEWAL" = true ] && EXTRA_FLAGS="--force-renewal"
+
     echo "Issuing/expanding cert for: ${DESIRED_DOMAINS[*]}"
+    [ -n "$EXTRA_FLAGS" ] && echo "Using flags: $EXTRA_FLAGS"
+
     certbot certonly \
         --config-dir="$CERT_DIR" \
         --work-dir="$CERT_DIR" \
@@ -105,9 +149,10 @@ if [ "$NEEDS_REISSUE" = true ]; then
         --agree-tos \
         --register-unsafely-without-email \
         --expand \
+        $EXTRA_FLAGS \
         --non-interactive
 else
-    echo "All domains covered. Running normal renewal check..."
+    echo "All domains covered and cert is valid. Running normal renewal check..."
     certbot renew \
         --config-dir="$CERT_DIR" \
         --work-dir="$CERT_DIR" \
@@ -117,29 +162,46 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Re-detect live dir (certbot may have created a new lineage)
+# ---------------------------------------------------------------------------
+
+NEW_LIVE_DIR=""
+for d in $(ls -d "$CERT_DIR/live/$DOMAIN"* 2>/dev/null | sort -V | tac); do
+    if [ -f "$d/fullchain.pem" ]; then
+        NEW_LIVE_DIR="$d"
+        break
+    fi
+done
+
+if [ -z "$NEW_LIVE_DIR" ]; then
+    echo "ERROR: No cert found after certbot run"
+    exit 1
+fi
+
+[ "$NEW_LIVE_DIR" != "${LIVE_DIR:-}" ] && echo "New lineage detected: $NEW_LIVE_DIR"
+
+# ---------------------------------------------------------------------------
 # Rebuild bundle if cert changed
 # ---------------------------------------------------------------------------
 
 AFTER_FP=""
-if [ -f "$LIVE_DIR/fullchain.pem" ]; then
-    AFTER_FP=$(openssl x509 -noout -fingerprint -in "$LIVE_DIR/fullchain.pem" 2>/dev/null || echo "")
+if [ -f "$NEW_LIVE_DIR/fullchain.pem" ]; then
+    AFTER_FP=$(openssl x509 -noout -fingerprint -in "$NEW_LIVE_DIR/fullchain.pem" 2>/dev/null || echo "")
 fi
 
 if [ "$BEFORE_FP" != "$AFTER_FP" ]; then
     echo "Certificate was renewed/issued. Rebuilding haproxy bundle..."
 
-    if [ -f "$LIVE_DIR/fullchain.pem" ] && [ -f "$LIVE_DIR/privkey.pem" ]; then
+    if [ -f "$NEW_LIVE_DIR/fullchain.pem" ] && [ -f "$NEW_LIVE_DIR/privkey.pem" ]; then
         mkdir -p /srv/haproxy/certs
-        cat "$LIVE_DIR/fullchain.pem" "$LIVE_DIR/privkey.pem" > "$BUNDLE"
+        cat "$NEW_LIVE_DIR/fullchain.pem" "$NEW_LIVE_DIR/privkey.pem" > "$BUNDLE"
         chmod 0600 "$BUNDLE"
         echo "Bundle updated at $BUNDLE"
-
-        # Show new cert details
-        openssl x509 -in "$LIVE_DIR/fullchain.pem" -noout -dates 2>/dev/null || true
-        openssl x509 -in "$LIVE_DIR/fullchain.pem" -noout -text 2>/dev/null \
+        openssl x509 -in "$NEW_LIVE_DIR/fullchain.pem" -noout -dates 2>/dev/null || true
+        openssl x509 -in "$NEW_LIVE_DIR/fullchain.pem" -noout -text 2>/dev/null \
             | grep -A1 "Subject Alternative Name" || true
     else
-        echo "ERROR: Certificate files not found in $LIVE_DIR"
+        echo "ERROR: Certificate files not found in $NEW_LIVE_DIR"
         exit 1
     fi
 else
