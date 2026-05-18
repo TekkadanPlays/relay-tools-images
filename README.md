@@ -305,6 +305,7 @@ Push to the relevant repo and changes deploy within ~60 seconds.
 | `/srv/sporeboard/.env` | Sporeboard Hono server config (PORT, KANBOARD_URL) |
 | `/srv/sporechat/spore/.env` | Sporechat Spore frontend config (PORT, JAM_HOST) |
 | `/srv/sporechat/jam/.env` | Sporechat Jam server config (JAM_HOST) |
+| `/srv/haproxy/cert-domains.txt` | TLS cert domain list (certrenew.sh reads this) |
 | `/srv/haproxy/certs/bundle.pem` | TLS certificate |
 | `/srv/mysql/.creator-mysql-uri.txt` | MySQL connection string |
 | `/srv/oni/data/oni.db` | Oni SQLite database (stream config, chat, users) |
@@ -376,7 +377,7 @@ rstate is a relay state aggregation engine from the [nostr-watch](https://github
 - [x] Add Sporeboard machine (Kanban board, Bun/Hono/InfernoJS)
 - [x] Add Sporechat machine (Jam audio rooms + Spore frontend)
 - [x] SPOREBOARD_ENABLED + SPORECHAT_ENABLED flags in configure.sh
-- [ ] Add HAProxy `board.<domain>` + `jam.<domain>` routing rules
+- [ ] Add HAProxy `sporeboard.<domain>` + `meet.<domain>` routing rules
 - [ ] Add Kanboard backend container (or document external Docker setup)
 - [ ] Remove legacy ribbit container after mycelium migration verified
 - [ ] Evaluate relaymon for independent RTT monitoring

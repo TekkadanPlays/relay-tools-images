@@ -10,9 +10,10 @@
 #
 # The certrenew script will automatically expand the cert to include
 # any new domains found here that aren't in the current cert.
+#
+# configure.sh auto-generates this file at install time and each
+# service block appends its subdomain when enabled.
 
 mycelium.social
 app.mycelium.social
-chat.mycelium.social
-live.mycelium.social
 monitor.mycelium.social
