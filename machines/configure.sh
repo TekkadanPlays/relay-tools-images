@@ -56,6 +56,8 @@ systemd-nspawn --pipe -M keys-certs-manager /bin/bash << EOF
     CERT_DOMAINS="-d $MYDOMAIN -d app.$MYDOMAIN"
     [ "${HYPHAE_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d chat.$MYDOMAIN"
     [ "${LIVE_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d live.$MYDOMAIN"
+    [ "${SPOREBOARD_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d board.$MYDOMAIN"
+    [ "${SPORECHAT_ENABLED:-false}" = "true" ] && CERT_DOMAINS="$CERT_DOMAINS -d jam.$MYDOMAIN"
 
     if [ -z "$MYEMAIL" ]; then
         certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" $CERT_DOMAINS --agree-tos --register-unsafely-without-email --standalone --preferred-challenges http --non-interactive
@@ -248,6 +250,45 @@ DOMAIN=$MYDOMAIN
 EOF
     machinectl start hyphae
     echo "Hyphae IRC web client started on port 3200"
+fi
+
+# ─── OPTIONAL: Sporeboard (Kanban board) ───
+if [ "${SPOREBOARD_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up Sporeboard Kanban frontend ==="
+    if [ -z "$MYDOMAIN" ]; then
+        echo "ERROR: MYDOMAIN is empty — cannot configure Sporeboard."
+        echo "Set MYDOMAIN in .env or environment before running configure.sh"
+        exit 1
+    fi
+    mkdir -p /srv/sporeboard
+    cat << EOF > /srv/sporeboard/.env
+PORT=3400
+NODE_ENV=production
+KANBOARD_URL=http://127.0.0.1:8080
+EOF
+    machinectl start sporeboard
+    echo "Sporeboard started on port 3400"
+fi
+
+# ─── OPTIONAL: Sporechat (audio rooms) ───
+if [ "${SPORECHAT_ENABLED:-false}" = "true" ]; then
+    echo "=== Setting up Sporechat audio rooms ==="
+    if [ -z "$MYDOMAIN" ]; then
+        echo "ERROR: MYDOMAIN is empty — cannot configure Sporechat."
+        echo "Set MYDOMAIN in .env or environment before running configure.sh"
+        exit 1
+    fi
+    mkdir -p /srv/sporechat
+    cat << EOF > /srv/sporechat/spore/.env
+PORT=3500
+NODE_ENV=production
+JAM_HOST=$MYDOMAIN
+EOF
+    cat << EOF > /srv/sporechat/jam/.env
+JAM_HOST=$MYDOMAIN
+EOF
+    machinectl start sporechat
+    echo "Sporechat started (Jam server + Spore frontend on port 3500)"
 fi
 
 # Configure haproxy management daemon (cookiecutter)

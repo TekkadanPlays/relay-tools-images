@@ -1,0 +1,17 @@
+[Unit]
+Description=Sporechat Jam audio server
+Wants=network.target
+
+[Service]
+ExecStart=/usr/bin/pnpm --filter @jam-systems/server dev
+WorkingDirectory=/app/jam
+Restart=always
+User=root
+EnvironmentFile=-/app/jam/.env
+Environment=NODE_ENV=production
+Type=simple
+TimeoutStopSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

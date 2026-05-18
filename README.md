@@ -113,15 +113,17 @@ Live streaming server for `live.<yourdomain>`.
 
 Oni is a self-contained Go binary. HAProxy routes `live.<domain>` → port 8085. RTMP port 1935 is exposed directly (not proxied). SQLite database in `data/oni.db`. Frontend built with InfernoJS + Blazecn + Tailwind, compiled into `static/web/` and embedded by the Go binary.
 
-### EXTRAS (WIP)
+### EXTRAS
 
-These are work-in-progress and not yet wired into the installer.
+Optional productivity and communication services.
 
-| Container | Description |
-|---|---|
-| `hyphae` | IRC client gateway (connects to any IRC server) |
-| `ergo` | IRC daemon (WIP — config files only, no install script yet) |
-| `influx` | InfluxDB time-series database (intended for metrics/monitoring) |
+| Container | Port | Description |
+|---|---|---|
+| `sporeboard` | 3400 | Sporeboard — Kanban board frontend for Kanboard (Bun/Hono/InfernoJS) |
+| `sporechat` | 3500 | Sporechat — Audio rooms powered by Jam + Spore (Node.js + Bun) |
+| `hyphae` | 3200 | IRC client gateway (connects to any IRC server) |
+| `ergo` | 6667 | IRC daemon (WIP — config files only, no install script yet) |
+| `influx` | — | InfluxDB time-series database (intended for metrics/monitoring) |
 
 ## Repository Map
 
@@ -132,6 +134,8 @@ These are work-in-progress and not yet wired into the installer.
 | [`relaycreator`](https://github.com/TekkadanPlays/relaycreator) | Express API + InfernoJS admin panel + web SPA | `relaycreator` container at `/app` |
 | [`nostr-watch`](https://github.com/sandwichfarm/nostr-watch) | rstate NIP-66 relay discovery engine | `rstate` container at `/app` |
 | [`oni`](https://github.com/TekkadanPlays/oni) | Owncast fork — live streaming with Nostr auth + InfernoJS frontend | `oni` container at `/app` |
+| [`sporeboard`](https://github.com/TekkadanPlays/sporeboard) | Kanban board frontend for Kanboard (Bun/Hono/InfernoJS) | `sporeboard` container at `/app` |
+| [`sporechat`](https://github.com/TekkadanPlays/sporechat) | Audio rooms — Jam engine + Spore frontend | `sporechat` container at `/app` |
 
 ## Quick Start
 
@@ -263,6 +267,8 @@ Containers with a `deploy.timer` check for upstream git changes every 60 seconds
 | `rstate` | `sandwichfarm/nostr-watch.git` | bun |
 | `coinos` | `TekkadanPlays/coinos-server.git` | bun |
 | `oni` | `TekkadanPlays/oni.git` | go build + bun (Inferno frontend) |
+| `sporeboard` | `TekkadanPlays/sporeboard.git` | bun |
+| `sporechat` | `TekkadanPlays/sporechat.git` | pnpm (Jam server) + bun (Spore frontend) |
 
 Push to the relevant repo and changes deploy within ~60 seconds.
 
@@ -296,6 +302,9 @@ Push to the relevant repo and changes deploy within ~60 seconds.
 | `/srv/mycelium/ribbit/.env` | Mycelium Hono server config (PORT, CREATOR_DOMAIN) |
 | `/srv/ribbit/ribbit/.env` | Ribbit Hono server config (PORT, RSTATE_URL) |
 | `/srv/rstate/.env` | rstate config (REST_PORT, CVM_SERVER_NSEC, ingest relays) |
+| `/srv/sporeboard/.env` | Sporeboard Hono server config (PORT, KANBOARD_URL) |
+| `/srv/sporechat/spore/.env` | Sporechat Spore frontend config (PORT, JAM_HOST) |
+| `/srv/sporechat/jam/.env` | Sporechat Jam server config (JAM_HOST) |
 | `/srv/haproxy/certs/bundle.pem` | TLS certificate |
 | `/srv/mysql/.creator-mysql-uri.txt` | MySQL connection string |
 | `/srv/oni/data/oni.db` | Oni SQLite database (stream config, chat, users) |
@@ -364,5 +373,10 @@ rstate is a relay state aggregation engine from the [nostr-watch](https://github
 - [ ] Add Oni to configure.sh interactive installer (ONI_ENABLED flag)
 - [ ] Add HAProxy `live.<domain>` routing to configure.sh
 - [ ] Wire up hyphae + ergo (IRC gateway + daemon)
+- [x] Add Sporeboard machine (Kanban board, Bun/Hono/InfernoJS)
+- [x] Add Sporechat machine (Jam audio rooms + Spore frontend)
+- [x] SPOREBOARD_ENABLED + SPORECHAT_ENABLED flags in configure.sh
+- [ ] Add HAProxy `board.<domain>` + `jam.<domain>` routing rules
+- [ ] Add Kanboard backend container (or document external Docker setup)
 - [ ] Remove legacy ribbit container after mycelium migration verified
 - [ ] Evaluate relaymon for independent RTT monitoring

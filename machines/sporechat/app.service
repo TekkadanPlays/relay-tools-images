@@ -1,0 +1,18 @@
+[Unit]
+Description=Sporechat Spore frontend
+Wants=network.target
+After=jam.service
+
+[Service]
+ExecStart=/usr/local/bin/bun run /app/spore/src/server.ts
+WorkingDirectory=/app/spore
+Restart=always
+User=root
+EnvironmentFile=-/app/spore/.env
+Environment=NODE_ENV=production
+Type=simple
+TimeoutStopSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
