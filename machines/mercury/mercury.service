@@ -16,7 +16,7 @@ Environment="POSTGRES_PORT=5432"
 Environment="POSTGRES_DB=gc_index_relay_dev"
 # For development/testing on native nspawn we can just use mix phx.server
 # For pure production, this should point to a built release instead.
-ExecStart=/usr/local/bin/mix phx.server
+ExecStart=/usr/bin/mix phx.server
 Restart=always
 
 [Install]
