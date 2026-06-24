@@ -1,0 +1,81 @@
+#!/usr/bin/bash
+# get paths for scripts, the repo parent dir and app name
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+RD="$(dirname "$SD")"
+
+# We assume WSL mounts the X drive at /mnt/x. Adjust if necessary.
+
+PASSWORD=creator
+echo $PASSWORD>$RD/$APP.passwd
+
+echo "Copying base Debian image..."
+cp -rfpu $RD/debian /var/lib/machines/$APP
+
+echo "Copying nspawn config..."
+cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+
+echo "Copying systemd services..."
+cp $SD/mercury.service /var/lib/machines/$APP/lib/systemd/system/mercury.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/mercury.service
+
+echo "Copying gc_index_relay source code into the container..."
+mkdir -p /var/lib/machines/$APP/app
+cp -r $SD/app/* /var/lib/machines/$APP/app/
+
+echo "Starting systemd-nspawn setup..."
+systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
+	echo -e "$PASSWORD\n$PASSWORD" | passwd
+	echo "$APP">/etc/hostname
+
+	apt update
+	apt -y install --no-install-suggests git build-essential flex bison \
+		curl gnupg apt-transport-https \
+		postgresql-15 postgresql-server-dev-15 postgresql-15-pgvector
+
+	# Compile Apache AGE for PostgreSQL 15
+	git clone https://github.com/apache/age.git /age-src
+	cd /age-src
+	git checkout release/PG15/1.5.0
+	make install
+	echo "shared_preload_libraries = 'age'" >> /etc/postgresql/15/main/postgresql.conf
+	
+	# Start postgresql temporarily to setup user and database
+	systemctl start postgresql
+	su - postgres -c "psql -c \"CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';\""
+	su - postgres -c "psql -c \"CREATE DATABASE gc_index_relay_dev;\""
+	su - postgres -c "psql -d gc_index_relay_dev -c \"CREATE EXTENSION age;\""
+
+	# Install Erlang and Elixir via Team RabbitMQ apt
+	curl -1sLf "https://keys.openpgp.org/vks/v1/by-fingerprint/0A9AF2115F4687BD29803A206B73A36E6026DFCA" | gpg --dearmor | tee /usr/share/keyrings/com.rabbitmq.team.gpg >/dev/null
+	tee /etc/apt/sources.list.d/rabbitmq-erlang.list >/dev/null <<REPO
+deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb1.rabbitmq.com/rabbitmq-erlang/debian/bullseye bullseye main
+deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb2.rabbitmq.com/rabbitmq-erlang/debian/bullseye bullseye main
+REPO
+	apt update
+	apt -y install erlang-base erlang-crypto erlang-ssl erlang-public-key erlang-inets erlang-os-mon erlang-runtime-tools erlang-syntax-tools erlang-parsetools erlang-tools elixir
+
+	# Configure Phoenix Application
+	cd /app
+	mix local.hex --force
+	mix local.rebar --force
+	
+	export MIX_ENV=prod
+	export POSTGRES_USER=postgres
+	export POSTGRES_PASSWORD=postgres
+	export POSTGRES_HOST=localhost
+	export POSTGRES_PORT=5432
+	export POSTGRES_DB=gc_index_relay_dev
+	
+	mix deps.get --only prod
+	mix compile
+	mix ecto.setup
+
+	# Enable Services
+	systemctl enable postgresql.service
+	systemctl enable mercury.service
+EOF
+
+systemctl stop systemd-nspawn@$APP
+echo "Mercury setup complete!"

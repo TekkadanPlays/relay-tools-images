@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+
+# Start the server
+PHX_SERVER=true exec ./gc_index_relay start

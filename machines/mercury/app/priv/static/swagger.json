@@ -1,0 +1,259 @@
+{
+  "info": {
+    "version": "0.2.0",
+    "description": "A Nostr index relay for the http protocol, from GitCitadel. Featuring a RESTful API and Swagger, it specializes in swift retrieval or publications, repos, and similar graphs of related events\n\n**Supported NIPs:** NIP-11, NIP-70\n\nRelay information document available at `GET /` with `Accept: application/nostr+json`.",
+    "title": "Mercury Index-Relay"
+  },
+  "host": "localhost:4000",
+  "definitions": {
+    "PubEventList": {
+      "description": "A list of Nostr events",
+      "items": {
+        "$ref": "#/definitions/PubEvent"
+      },
+      "title": "PubEventList",
+      "type": "array"
+    },
+    "PubEvent": {
+      "description": "A signed Nostr event",
+      "example": {
+        "content": "Walled gardens became prisons, and users, lost.",
+        "created_at": 1673347337,
+        "id": "4376c65d2f232afbe9b882a35baa4f6fe8667c4e684749af565f981833ed6a65",
+        "kind": 1,
+        "pubkey": "6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93",
+        "sig": "908a15e46fb4d8675bab026fc230a0e3542bfade63da02d542fb78b2a8513fcd0092619a2c8c1221e581946e0191f2af505dfdf8657a414dbca329186f009262",
+        "tags": []
+      },
+      "properties": {
+        "content": {
+          "description": "Arbitrary event content",
+          "type": "string"
+        },
+        "created_at": {
+          "description": "Unix timestamp in seconds",
+          "type": "integer"
+        },
+        "id": {
+          "description": "32-byte lowercase hex event ID (SHA-256 of serialized event)",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Nostr event kind",
+          "type": "integer"
+        },
+        "pubkey": {
+          "description": "32-byte lowercase hex public key of the event creator",
+          "type": "string"
+        },
+        "sig": {
+          "description": "64-byte lowercase hex Schnorr signature",
+          "type": "string"
+        },
+        "tags": {
+          "description": "List of tags, each an array of strings",
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "sig",
+        "content",
+        "tags",
+        "kind",
+        "created_at",
+        "pubkey",
+        "id"
+      ],
+      "title": "PubEvent",
+      "type": "object"
+    }
+  },
+  "schemes": [
+    "https",
+    "wss"
+  ],
+  "paths": {
+    "/api/events": {
+      "get": {
+        "description": "The `since`, `until`, and `limit` parameters are required. This ensures every query generates a\nunique, repeatable response. Queries that do not specify `since`, `until`, or `limit` should be\nmade against POST /api/events/filter.\n",
+        "operationId": "query_events",
+        "parameters": [
+          {
+            "description": "Start time",
+            "in": "query",
+            "name": "since",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "End time",
+            "in": "query",
+            "name": "until",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "description": "Maximum number of events",
+            "in": "query",
+            "name": "limit",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PubEventList"
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        },
+        "summary": "Query events by specifying NIP-01 filter parameters in the URL query string.",
+        "tags": [
+          "Events"
+        ]
+      },
+      "post": {
+        "description": "Accepts a signed Nostr event JSON. Event ID and signature are validated.",
+        "operationId": "create_event",
+        "parameters": [],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/PubEvent"
+            }
+          },
+          "400": {
+            "description": "BadRequest"
+          }
+        },
+        "summary": "Publish a Nostr event",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/events/filter": {
+      "post": {
+        "description": "  Returns a list of events matching the filter in descending order of created_at time.\n  Response is returned as a batch, not streamed, so a `limit` parameter is required to prevent\n  the response from getting too large.\n",
+        "operationId": "filter_events",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PubEventList"
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        },
+        "summary": "Query events using a JSON filter in the request body.",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/events/{event_id}": {
+      "delete": {
+        "description": "",
+        "operationId": "delete_event",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "NoContent"
+          },
+          "404": {
+            "description": "NotFound"
+          }
+        },
+        "summary": "Delete a Nostr event by ID",
+        "tags": [
+          "Events"
+        ]
+      },
+      "get": {
+        "description": "",
+        "operationId": "show_event",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PubEvent"
+            }
+          },
+          "404": {
+            "description": "NotFound"
+          }
+        },
+        "summary": "Retrieve a Nostr event by ID",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/publications/search": {
+      "post": {
+        "description": "Exact-match search over publication index metadata tags: `d`, `title`, `author`, and `source`.\nMatching is case-insensitive and treats hyphens and spaces as equivalent. Partial substring\nmatches are not returned.\n",
+        "operationId": "search_publications",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PubEventList"
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        },
+        "summary": "Search kind-30040 publication indexes by metadata",
+        "tags": [
+          "Publications"
+        ]
+      }
+    }
+  },
+  "swagger": "2.0",
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ]
+}

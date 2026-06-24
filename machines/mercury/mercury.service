@@ -1,0 +1,23 @@
+[Unit]
+Description=Mercury Index-Relay Phoenix Server
+After=postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/app
+Environment="MIX_ENV=prod"
+Environment="PORT=4000"
+Environment="POSTGRES_USER=postgres"
+Environment="POSTGRES_PASSWORD=postgres"
+Environment="POSTGRES_HOST=localhost"
+Environment="POSTGRES_PORT=5432"
+Environment="POSTGRES_DB=gc_index_relay_dev"
+# For development/testing on native nspawn we can just use mix phx.server
+# For pure production, this should point to a built release instead.
+ExecStart=/usr/local/bin/mix phx.server
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

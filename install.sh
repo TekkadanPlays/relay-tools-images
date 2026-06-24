@@ -117,6 +117,16 @@ print_service "on" "haproxy"            "HAProxy — TLS termination + request r
 print_service "on" "relaycreator"       "Relay Creator — Express API server + InfernoJS admin panel"
 print_service "on" "keys-certs-manager" "Certificate manager — Let's Encrypt auto-renewal"
 
+# Next-Gen Core
+echo ""
+echo -e "${CYAN}NEXT-GEN BACKEND (optional):${NC}"
+
+INSTALL_MERCURY=false
+if confirm "Install Mercury Index-Relay (GitCitadel backend)?" "n"; then
+    INSTALL_MERCURY=true
+    print_service "on" "mercury" "Mercury — Multi-tenant Index-Relay (Elixir/Phoenix)"
+fi
+
 # Frontend
 echo ""
 echo -e "${BLUE}FRONTEND (optional):${NC}"
@@ -201,6 +211,7 @@ fi
 print_header "Installation Summary"
 
 SERVICES=("mysql" "strfry" "haproxy" "relaycreator" "keys-certs-manager")
+[ "$INSTALL_MERCURY" = true ] && SERVICES+=("mercury")
 [ "$INSTALL_RIBBIT" = true ] && SERVICES+=("ribbit")
 [ "$INSTALL_MYCELIUM" = true ] && SERVICES+=("mycelium")
 [ "$INSTALL_RSTATE" = true ] && SERVICES+=("rstate")
@@ -296,6 +307,13 @@ for svc in strfry haproxy mysql relaycreator keys-certs-manager; do
     echo -e "${GREEN}$svc installed${NC}"
 done
 
+if [ "$INSTALL_MERCURY" = true ]; then
+    print_section "Installing mercury backend"
+    cd "$MACHINES_DIR/mercury"
+    ./install
+    echo -e "${GREEN}mercury installed${NC}"
+fi
+
 if [ "$INSTALL_RIBBIT" = true ]; then
     print_section "Installing ribbit frontend"
     cd "$MACHINES_DIR/ribbit"
@@ -373,6 +391,7 @@ for svc in mysql strfry relaycreator haproxy; do
     echo -e "  ${GREEN}Enabled${NC} $svc"
 done
 
+[ "$INSTALL_MERCURY" = true ] && machinectl enable mercury 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} mercury"
 [ "$INSTALL_RIBBIT" = true ] && machinectl enable ribbit 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} ribbit"
 [ "$INSTALL_MYCELIUM" = true ] && machinectl enable mycelium 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} mycelium"
 [ "$INSTALL_RSTATE" = true ] && machinectl enable rstate 2>/dev/null && echo -e "  ${GREEN}Enabled${NC} rstate"

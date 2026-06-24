@@ -1,0 +1,124 @@
+<Layouts.flash_group flash={@flash} />
+<div style="max-width:480px; margin:0 auto; padding:2rem 1.25rem;">
+  <div style="text-align:center; margin-bottom:2rem;">
+    <img
+      src={~p"/images/mercury_icon.png"}
+      alt="Mercury Index-Relay"
+      style="width:112px; height:112px; margin:0 auto 1rem;"
+    />
+    <h1 style="font-size:1.5rem; font-weight:700; margin-bottom:0.25rem;">
+      Mercury Index-Relay
+    </h1>
+    <p style="font-size:0.8rem; opacity:0.6; margin-bottom:0.75rem;">
+      by GitCitadel &nbsp;·&nbsp; v{Application.spec(:gc_index_relay, :vsn)}
+    </p>
+    <p style="font-size:0.9rem; line-height:1.6;">
+      A Nostr index relay for the HTTP protocol. Specialises in swift retrieval
+      of publications, repos, and graphs of related events.
+    </p>
+  </div>
+
+  <div style="margin-bottom:2rem;">
+    <a
+      href={~p"/api/swagger"}
+      class="btn btn-primary"
+      style="display:block; width:100%; margin-bottom:0.5rem;"
+    >
+      Swagger UI
+    </a>
+    <a href={~p"/api"} class="btn btn-outline" style="display:block; width:100%;">
+      API Index
+    </a>
+  </div>
+
+  <div style="margin-bottom:2rem; display:flex; flex-direction:column; gap:0.75rem;">
+    <div class="rounded-box border border-base-300" style="padding:0.875rem;">
+      <strong style="font-size:0.875rem;">REST API</strong>
+      <p style="font-size:0.8rem; margin-top:0.25rem;">
+        Full event lifecycle over HTTP — publish, query, fetch by ID, delete.
+      </p>
+    </div>
+    <div class="rounded-box border border-base-300" style="padding:0.875rem;">
+      <strong style="font-size:0.875rem;">NIP-01 Filters</strong>
+      <p style="font-size:0.8rem; margin-top:0.25rem;">
+        Filter by kind, author, tags, and time window. Supports #p, #e, and more.
+      </p>
+    </div>
+    <div class="rounded-box border border-base-300" style="padding:0.875rem;">
+      <strong style="font-size:0.875rem;">NIP-11 &amp; NIP-70</strong>
+      <p style="font-size:0.8rem; margin-top:0.25rem;">
+        Relay info at <code>GET /</code> with <code>Accept: application/nostr+json</code>.
+        Protected events are rejected.
+      </p>
+    </div>
+  </div>
+
+  <div style="margin-bottom:2rem;">
+    <p style="font-size:0.7rem; font-weight:600; opacity:0.55; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
+      Endpoints
+    </p>
+    <div
+      class="rounded-box border border-base-300"
+      style="font-size:0.8rem; overflow:hidden;"
+    >
+      <%= for {method, path, desc} <- [
+        {"GET",    "/api",               "List available endpoints"},
+        {"GET",    "/api/events",         "Cacheable query (since, until, limit)"},
+        {"POST",   "/api/events/filter",  "Filter query with JSON body"},
+        {"POST",   "/api/publications/search", "Publication metadata search (kind 30040)"},
+        {"GET",    "/api/events/:id",     "Fetch a single event by ID"},
+        {"POST",   "/api/events",         "Publish a new event"},
+        {"DELETE", "/api/events/:id",     "Delete an event by ID"},
+        {"GET",    "/api/swagger",        "Interactive Swagger UI"}
+      ] do %>
+        <div style="padding:0.5rem 0.875rem; border-bottom:1px solid var(--fallback-b3,oklch(var(--b3)/1));">
+          <p style="font-family:monospace; font-size:0.75rem; opacity:0.7;">{method} {path}</p>
+          <p style="margin-top:0.15rem;">{desc}</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <footer style="text-align:center; font-size:0.75rem; opacity:0.6; padding-top:1rem; border-top:1px solid oklch(var(--b3)/1);">
+    <a
+      href="https://gitcitadel.com"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="hover:opacity-100"
+      style="display:inline-flex; align-items:center; gap:0.3rem; vertical-align:middle;"
+    >
+      <img
+        src={~p"/images/gitcitadel_icon.png"}
+        alt=""
+        style="width:16px; height:16px;"
+      />GitCitadel
+    </a>
+    &nbsp;·&nbsp;
+    <a
+      href="https://git.imwald.eu/silberengel/gc_index_relay"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="hover:opacity-100"
+    >
+      Relay Repo
+    </a>
+    &nbsp;·&nbsp;
+    <a
+      href="https://github.com/ShadowySupercode"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="hover:opacity-100"
+    >
+      GitCitadel on GitHub
+    </a>
+    &nbsp;·&nbsp;
+    <a
+      href="https://alexandria.gitcitadel.eu/events?q=GitCitadel%40gitcitadel.com"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="hover:opacity-100"
+    >
+      GitCitadel on Nostr
+    </a>
+  </footer>
+</div>
