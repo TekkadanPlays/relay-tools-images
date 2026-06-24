@@ -8,7 +8,7 @@ Type=simple
 User=root
 WorkingDirectory=/app
 Environment="MIX_ENV=prod"
-Environment="PORT=4000"
+Environment="PORT=4010"
 Environment="POSTGRES_USER=postgres"
 Environment="POSTGRES_PASSWORD=postgres"
 Environment="POSTGRES_HOST=localhost"
