@@ -70,7 +70,13 @@ REPO
 	
 	mix deps.get --only prod
 	mix compile
+	export SECRET_KEY_BASE=\$(mix phx.gen.secret)
+	export DATABASE_URL=ecto://postgres:postgres@localhost:5432/gc_index_relay_dev
 	mix ecto.setup
+
+	# Append required variables to mercury.service dynamically
+	echo "Environment=\"SECRET_KEY_BASE=\$SECRET_KEY_BASE\"" >> /lib/systemd/system/mercury.service
+	echo "Environment=\"DATABASE_URL=\$DATABASE_URL\"" >> /lib/systemd/system/mercury.service
 
 	# Enable Services
 	systemctl enable postgresql.service
