@@ -54,7 +54,7 @@ deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb
 deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb2.rabbitmq.com/rabbitmq-erlang/debian/bullseye bullseye main
 REPO
 	apt update
-	apt -y install erlang-base erlang-crypto erlang-ssl erlang-public-key erlang-inets erlang-os-mon erlang-runtime-tools erlang-syntax-tools erlang-parsetools erlang-tools elixir
+	apt -y install erlang-base erlang-dev erlang-crypto erlang-ssl erlang-public-key erlang-inets erlang-os-mon erlang-runtime-tools erlang-syntax-tools erlang-parsetools erlang-tools elixir
 
 	# Configure Phoenix Application
 	cd /app
