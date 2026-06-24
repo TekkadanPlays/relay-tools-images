@@ -84,8 +84,8 @@ defmodule GcIndexRelayWeb.FilterController do
   @spec validate_param_values(map()) :: {:ok, map()} | {:error, String.t()}
   def validate_param_values(params) do
     with {:ok, limit} <- parse_limit_value(Map.get(params, "limit")) do
-      if limit < 1 or limit > 100 do
-        {:error, "The filter limit must be between 1 and 100."}
+      if limit < 1 or limit > 5000 do
+        {:error, "The filter limit must be between 1 and 5000."}
       else
         {:ok, Map.put(params, "limit", limit)}
       end
@@ -222,8 +222,8 @@ defmodule GcIndexRelayWeb.FilterController do
 
   defp parse_param("limit", value) do
     case Integer.parse(value) do
-      {int, ""} when int >= 1 and int <= 100 -> {:ok, int}
-      {int, ""} when is_integer(int) -> {:error, "The limit must be between 1 and 100."}
+      {int, ""} when int >= 1 and int <= 5000 -> {:ok, int}
+      {int, ""} when is_integer(int) -> {:error, "The limit must be between 1 and 5000."}
       _ -> {:error, "Invalid limit value: '#{value}' must be an integer"}
     end
   end
