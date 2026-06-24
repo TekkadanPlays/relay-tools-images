@@ -48,7 +48,7 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	su - postgres -c "psql -d gc_index_relay_dev -c \"CREATE EXTENSION age;\""
 
 	# Install Erlang and Elixir via Team RabbitMQ apt
-	curl -1sLf "https://keys.openpgp.org/vks/v1/by-fingerprint/0A9AF2115F4687BD29803A206B73A36E6026DFCA" | gpg --dearmor | tee /usr/share/keyrings/com.rabbitmq.team.gpg >/dev/null
+	curl -1sLkf "https://github.com/rabbitmq/signing-keys/releases/download/3.0/rabbitmq-release-signing-key.asc" | gpg --dearmor | tee /usr/share/keyrings/com.rabbitmq.team.gpg >/dev/null
 	tee /etc/apt/sources.list.d/rabbitmq-erlang.list >/dev/null <<REPO
 deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb1.rabbitmq.com/rabbitmq-erlang/debian/bullseye bullseye main
 deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb2.rabbitmq.com/rabbitmq-erlang/debian/bullseye bullseye main
