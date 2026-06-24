@@ -1,6 +1,9 @@
 #!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 
+apt-get update
+apt-get install -y postgresql postgresql-server-dev-all git build-essential curl wget gnupg flex bison
+
 PG_VER=17
 PG_CONFIG=/usr/lib/postgresql/17/bin/pg_config
 
