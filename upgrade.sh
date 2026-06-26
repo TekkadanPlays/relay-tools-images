@@ -118,6 +118,26 @@ systemctl status app --no-pager -l || true
     echo -e "${GREEN}mycelium upgraded${NC}"
 }
 
+upgrade_mercury() {
+    echo -e "${CYAN}Upgrading mercury (gc_index_relay)...${NC}"
+    # Copy new files from host into container since it doesnt use a git clone inside
+    cp -r "$MACHINES_DIR/mercury/app/"* /var/lib/machines/mercury/app/
+    
+    nsrun mercury '
+cd /app
+export MIX_ENV=prod
+mix deps.get --only prod
+mix compile
+export DATABASE_URL=ecto://postgres:postgres@localhost:5432/gc_index_relay_dev
+mix ecto.migrate
+systemctl restart mercury
+
+echo "mercury rebuilt, migrated, and restarted"
+systemctl status mercury --no-pager -l || true
+'
+    echo -e "${GREEN}mercury upgraded${NC}"
+}
+
 upgrade_rstate() {
     echo -e "${CYAN}Upgrading rstate...${NC}"
     nsrun rstate '
@@ -269,7 +289,7 @@ if [ -z "$1" ]; then
     echo ""
 
     # Check which containers are running
-    for svc in relaycreator ribbit mycelium rstate strfry haproxy oni hyphae ergo coinos bitcoinknots cln lnbits keydb; do
+    for svc in relaycreator ribbit mycelium mercury rstate strfry haproxy oni hyphae ergo coinos bitcoinknots cln lnbits keydb; do
         if container_running "$svc"; then
             echo -e "  ${GREEN}●${NC} $svc"
         else
@@ -293,6 +313,7 @@ case "$SERVICE" in
     relaycreator)  upgrade_relaycreator ;;
     ribbit)        upgrade_ribbit ;;
     mycelium)      upgrade_mycelium ;;
+    mercury)       upgrade_mercury ;;
     rstate)        upgrade_rstate ;;
     strfry)        upgrade_strfry "$REBUILD" ;;
     haproxy)       upgrade_haproxy ;;
