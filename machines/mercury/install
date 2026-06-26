@@ -50,8 +50,8 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	# Install Erlang and Elixir via Team RabbitMQ apt
 	curl -1sLkf "https://github.com/rabbitmq/signing-keys/releases/download/3.0/rabbitmq-release-signing-key.asc" | gpg --dearmor | tee /usr/share/keyrings/com.rabbitmq.team.gpg >/dev/null
 	tee /etc/apt/sources.list.d/rabbitmq-erlang.list >/dev/null <<REPO
-deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb1.rabbitmq.com/rabbitmq-erlang/debian/bullseye bullseye main
-deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb2.rabbitmq.com/rabbitmq-erlang/debian/bullseye bullseye main
+deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb1.rabbitmq.com/rabbitmq-erlang/debian/bookworm bookworm main
+deb [arch=amd64 signed-by=/usr/share/keyrings/com.rabbitmq.team.gpg] https://deb2.rabbitmq.com/rabbitmq-erlang/debian/bookworm bookworm main
 REPO
 	apt update
 	apt -y install erlang-base erlang-dev erlang-crypto erlang-ssl erlang-public-key erlang-inets erlang-os-mon erlang-runtime-tools erlang-syntax-tools erlang-parsetools erlang-tools elixir
@@ -85,3 +85,4 @@ EOF
 
 systemctl stop systemd-nspawn@$APP
 echo "Mercury setup complete!"
+
