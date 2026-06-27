@@ -132,7 +132,6 @@ defmodule GcIndexRelay.Federation.SyncWorker do
       agreement.last_sync_cursor
     )
 
-    synced = 0
     latest_cursor = agreement.last_sync_cursor
 
     result =

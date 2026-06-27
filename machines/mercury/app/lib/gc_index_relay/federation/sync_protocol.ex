@@ -19,6 +19,7 @@ defmodule GcIndexRelay.Federation.SyncProtocol do
   """
 
   require Logger
+  import Ecto.Query
 
   alias GcIndexRelay.Repo
   alias GcIndexRelay.Nostr
@@ -199,7 +200,7 @@ defmodule GcIndexRelay.Federation.SyncProtocol do
 
   defp build_headers(nil), do: []
   defp build_headers(api_key) do
-    [{'authorization', String.to_charlist("Bearer #{api_key}")}]
+    [{~c"authorization", String.to_charlist("Bearer #{api_key}")}]
   end
 
   defp http_post_json(url, body, extra_headers) do
@@ -210,11 +211,11 @@ defmodule GcIndexRelay.Federation.SyncProtocol do
     json_body = Jason.encode!(body)
     url_charlist = String.to_charlist(url)
 
-    headers = [{'content-type', 'application/json'} | extra_headers]
+    headers = [{~c"content-type", ~c"application/json"} | extra_headers]
 
     case :httpc.request(
       :post,
-      {url_charlist, headers, 'application/json', json_body},
+      {url_charlist, headers, ~c"application/json", json_body},
       [timeout: @request_timeout_ms, ssl: [verify: :verify_none]],
       []
     ) do
