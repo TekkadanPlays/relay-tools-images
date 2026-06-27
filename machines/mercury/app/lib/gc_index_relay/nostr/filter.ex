@@ -253,12 +253,19 @@ defmodule GcIndexRelay.Nostr.Filter do
   """
   @spec apply(Ecto.Query.t(), t()) :: [struct()]
   def apply(%Ecto.Query{from: %{source: {_table, Event}}} = query, %__MODULE__{} = filter) do
+    alias GcIndexRelay.Nostr.HiddenEvent
+
     query
     |> apply_ids(filter.ids)
     |> apply_authors(filter.authors)
     |> apply_kinds(filter.kinds)
     |> apply_since(filter.since)
     |> apply_until(filter.until)
+    # Exclude hidden (soft-deleted) events from results
+    |> where([e], not exists(
+      from h in HiddenEvent,
+        where: h.event_id == fragment("encode(?, 'hex')", e.id)
+    ))
     |> preload(:tags)
     |> apply_tags(filter.tags)
     # Always sort in descending order of creation time

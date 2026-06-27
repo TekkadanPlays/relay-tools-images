@@ -184,4 +184,70 @@ defmodule GcIndexRelayWeb.AdminController do
 
     conn |> put_status(:ok) |> json(%{ok: true, admins: admins})
   end
+
+  @doc """
+  Appoint a community moderator.
+
+  Body: `{ "pubkey": "...", "community_atag": "34550:..." }`
+  """
+  def appoint_mod(conn, %{"pubkey" => pubkey, "community_atag" => community_atag}) do
+    admin_pubkey = conn.assigns[:current_pubkey]
+
+    case Roles.appoint_mod(pubkey, community_atag, admin_pubkey) do
+      {:ok, mod} ->
+        conn
+        |> put_status(:created)
+        |> json(%{
+          ok: true,
+          message: "Moderator appointed",
+          moderator: %{
+            pubkey: mod.pubkey,
+            community: mod.community_atag,
+            appointed_by: mod.appointed_by
+          }
+        })
+
+      {:error, %Ecto.Changeset{} = cs} ->
+        errors = Ecto.Changeset.traverse_errors(cs, fn {msg, _} -> msg end)
+        conn |> put_status(:unprocessable_entity) |> json(%{error: "Failed", details: errors})
+    end
+  end
+
+  def appoint_mod(conn, _params) do
+    conn |> put_status(:bad_request) |> json(%{error: "Missing 'pubkey' and 'community_atag'"})
+  end
+
+  @doc """
+  Remove a community moderator.
+  `DELETE /api/admin/moderators/:pubkey/:community_atag`
+  """
+  def remove_mod(conn, %{"pubkey" => pubkey, "community_atag" => community_atag}) do
+    {deleted, _} = Roles.remove_mod(pubkey, community_atag)
+
+    if deleted > 0 do
+      conn |> put_status(:ok) |> json(%{ok: true, message: "Moderator removed"})
+    else
+      conn |> put_status(:not_found) |> json(%{error: "Moderator not found"})
+    end
+  end
+
+  @doc """
+  List all community moderators. Optional filter: `?community_atag=34550:...`
+  """
+  def list_mods(conn, params) do
+    community_filter = Map.get(params, "community_atag")
+
+    mods =
+      Roles.list_mods(community_filter)
+      |> Enum.map(fn m ->
+        %{
+          pubkey: m.pubkey,
+          community: m.community_atag,
+          appointed_by: m.appointed_by,
+          appointed_at: m.appointed_at && DateTime.to_iso8601(m.appointed_at)
+        }
+      end)
+
+    conn |> put_status(:ok) |> json(%{ok: true, moderators: mods})
+  end
 end

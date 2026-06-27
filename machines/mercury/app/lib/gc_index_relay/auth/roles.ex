@@ -5,7 +5,7 @@ defmodule GcIndexRelay.Auth.Roles do
   Checks three sources for admin status (in priority order):
   1. `MERCURY_ADMIN_PUBKEYS` env var (comma-separated, lockout recovery)
   2. `site_admins` DB table (first-claim + API-appointed)
-  3. Community moderator table (Phase 2)
+  3. `community_moderators` DB table (appointed by admin)
 
   Bans are checked via `banned_users` with automatic expiry handling.
   """
@@ -14,6 +14,7 @@ defmodule GcIndexRelay.Auth.Roles do
   alias GcIndexRelay.Repo
   alias GcIndexRelay.Nostr.SiteAdmin
   alias GcIndexRelay.Nostr.BannedUser
+  alias GcIndexRelay.Nostr.CommunityModerator
 
   @doc """
   Returns true if the given pubkey has site admin privileges.
@@ -60,13 +61,6 @@ defmodule GcIndexRelay.Auth.Roles do
     pubkey_lower = String.downcase(pubkey)
     now = DateTime.utc_now()
 
-    query =
-      from b in BannedUser,
-        where: b.pubkey == ^pubkey_lower,
-        where: is_nil(b.scope) or b.scope == ^(scope || ""),
-        where: is_nil(b.expires_at) or b.expires_at > ^now,
-        limit: 1
-
     # For site-wide check (scope=nil), only match NULL scope.
     # For community check, match NULL (site-wide) OR the specific scope.
     query =
@@ -103,7 +97,7 @@ defmodule GcIndexRelay.Auth.Roles do
     })
     |> Repo.insert(
       on_conflict: {:replace, [:banned_by, :reason, :expires_at, :updated_at]},
-      conflict_target: {:unsafe_fragment, "(pubkey, scope) WHERE scope IS NOT NULL"},
+      conflict_target: {:unsafe_fragment, "(pubkey, scope) WHERE scope IS NOT NULL"}
     )
   end
 
@@ -162,6 +156,66 @@ defmodule GcIndexRelay.Auth.Roles do
     env_only = Enum.reject(env_admins, fn a -> MapSet.member?(db_pubkeys, a.pubkey) end)
 
     db_admins ++ env_only
+  end
+
+  # ── Moderator functions ──
+
+  @doc """
+  Returns true if the given pubkey is a moderator for the given community.
+  Admins implicitly have mod privileges on all communities.
+  """
+  @spec is_mod?(String.t(), String.t()) :: boolean()
+  def is_mod?(pubkey, community_atag) when is_binary(pubkey) and is_binary(community_atag) do
+    pubkey_lower = String.downcase(pubkey)
+    is_admin?(pubkey_lower) or
+      Repo.exists?(
+        from m in CommunityModerator,
+          where: m.pubkey == ^pubkey_lower and m.community_atag == ^community_atag
+      )
+  end
+
+  @doc """
+  Appoints a community moderator. Only admins should call this.
+  Returns `{:ok, mod}` or `{:error, changeset}`.
+  """
+  @spec appoint_mod(String.t(), String.t(), String.t()) ::
+          {:ok, CommunityModerator.t()} | {:error, Ecto.Changeset.t()}
+  def appoint_mod(pubkey, community_atag, appointed_by) do
+    %CommunityModerator{}
+    |> CommunityModerator.changeset(%{
+      pubkey: String.downcase(pubkey),
+      community_atag: community_atag,
+      appointed_by: String.downcase(appointed_by),
+      appointed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
+    |> Repo.insert()
+  end
+
+  @doc """
+  Removes a community moderator. Returns `{deleted_count, nil}`.
+  """
+  @spec remove_mod(String.t(), String.t()) :: {non_neg_integer(), nil}
+  def remove_mod(pubkey, community_atag) do
+    pubkey_lower = String.downcase(pubkey)
+    from(m in CommunityModerator,
+      where: m.pubkey == ^pubkey_lower and m.community_atag == ^community_atag
+    )
+    |> Repo.delete_all()
+  end
+
+  @doc """
+  Lists all community moderators, optionally filtered by community.
+  """
+  @spec list_mods(String.t() | nil) :: [CommunityModerator.t()]
+  def list_mods(community_atag \\ nil) do
+    query = from(m in CommunityModerator, order_by: [asc: m.appointed_at])
+    query =
+      if community_atag do
+        from m in query, where: m.community_atag == ^community_atag
+      else
+        query
+      end
+    Repo.all(query)
   end
 
   # ── Private ──
