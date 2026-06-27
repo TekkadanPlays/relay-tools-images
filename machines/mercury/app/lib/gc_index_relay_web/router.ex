@@ -84,6 +84,20 @@ defmodule GcIndexRelayWeb.Router do
     get "/hidden", ModerationController, :list_hidden
   end
 
+  # ── Federation endpoints (require admin or mod role) ──
+  scope "/api/federation", GcIndexRelayWeb do
+    pipe_through :authenticated_api
+
+    post "/agreements", FederationController, :create
+    get "/agreements", FederationController, :index
+    get "/agreements/:id", FederationController, :show
+    put "/agreements/:id", FederationController, :update
+    delete "/agreements/:id", FederationController, :delete
+    post "/agreements/:id/approve", FederationController, :approve
+    post "/agreements/:id/reject", FederationController, :reject
+    post "/sync/:id", FederationController, :force_sync
+  end
+
   def swagger_info do
     relay_info = Application.fetch_env!(:gc_index_relay, :relay_info)
 

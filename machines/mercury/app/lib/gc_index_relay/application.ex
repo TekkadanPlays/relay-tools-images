@@ -13,8 +13,7 @@ defmodule GcIndexRelay.Application do
         maybe_repo(),
         {Phoenix.PubSub, name: GcIndexRelay.PubSub},
         GcIndexRelay.Graph.SyncWorker,
-        # Start a worker by calling: GcIndexRelay.Worker.start_link(arg)
-        # {GcIndexRelay.Worker, arg},
+        GcIndexRelay.Federation.SyncWorker,
         # Start to serve requests, typically the last entry
         GcIndexRelayWeb.Endpoint
       ]
