@@ -33,6 +33,32 @@ defmodule GcIndexRelayWeb.Router do
     resources "/events", EventController, only: [:show, :create, :delete]
   end
 
+  # ── Auth endpoints (public, no token required) ──
+  scope "/api/auth", GcIndexRelayWeb do
+    pipe_through :api
+
+    post "/claim-admin", AuthController, :claim_admin
+    post "/token", AuthController, :create_token
+  end
+
+  # ── Admin-only pipeline ──
+  pipeline :admin_api do
+    plug :accepts, ["json"]
+    plug GcIndexRelayWeb.Plugs.RequireRole, :admin
+  end
+
+  # ── Admin endpoints (require admin role) ──
+  scope "/api/admin", GcIndexRelayWeb do
+    pipe_through :admin_api
+
+    get "/stats", AdminController, :stats
+    delete "/events/purge", AdminController, :purge_events
+    post "/ban", AdminController, :ban
+    delete "/ban/:pubkey", AdminController, :unban
+    get "/bans", AdminController, :list_bans
+    get "/admins", AdminController, :list_admins
+  end
+
   def swagger_info do
     relay_info = Application.fetch_env!(:gc_index_relay, :relay_info)
 

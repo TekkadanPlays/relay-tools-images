@@ -69,6 +69,7 @@ defmodule GcIndexRelay.Nostr do
     with {:ok, event} <- Validator.validate_id(event),
          {:ok, event} <- Validator.validate_signature(event),
          {:ok, event} <- Validator.validate_not_protected(event),
+         {:ok, event} <- validate_not_banned(event),
          {:ok, event} <- Moderation.validate_community_access(event) do
       
       if event.kind == 5 do
@@ -103,6 +104,31 @@ defmodule GcIndexRelay.Nostr do
       end
 
       result
+    end
+  end
+
+  defp validate_not_banned(event) when is_struct(event, PubEvent) do
+    alias GcIndexRelay.Auth.Roles
+
+    # Extract community scope from the event's "a" tag (if present)
+    community_scope =
+      (event.tags || [])
+      |> Enum.find_value(fn
+        ["a", value | _] ->
+          case String.split(value, ":", parts: 3) do
+            ["34550", _pubkey, _name] -> value
+            _ -> nil
+          end
+        _ -> nil
+      end)
+
+    cond do
+      Roles.is_banned?(event.pubkey) ->
+        {:error, "blocked: user is banned from this relay"}
+      community_scope != nil and Roles.is_banned?(event.pubkey, community_scope) ->
+        {:error, "blocked: user is banned from this community"}
+      true ->
+        {:ok, event}
     end
   end
 
