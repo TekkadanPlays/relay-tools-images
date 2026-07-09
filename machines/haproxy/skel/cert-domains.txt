@@ -17,3 +17,4 @@
 mycelium.social
 app.mycelium.social
 monitor.mycelium.social
+api.mycelium.social
