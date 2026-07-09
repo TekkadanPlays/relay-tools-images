@@ -15,9 +15,12 @@ defmodule GcIndexRelay.NIP29.Core do
     privkey_hex = Application.get_env(:gc_index_relay, :relay_privkey)
     pubkey_hex = Application.get_env(:gc_index_relay, :relay_pubkey)
 
-    if is_nil(privkey_hex) or is_nil(pubkey_hex) do
+    if is_nil(privkey_hex) or is_nil(pubkey_hex) or privkey_hex == "" do
       []
     else
+      privkey_hex = String.trim(privkey_hex) |> String.downcase()
+      pubkey_hex = String.trim(pubkey_hex) |> String.downcase()
+      
       get_active_group_ids()
       |> Enum.map(&synthesize_group_event(&1, privkey_hex, pubkey_hex))
       |> Enum.reject(&is_nil/1)
