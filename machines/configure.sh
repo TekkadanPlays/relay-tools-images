@@ -59,11 +59,12 @@ $MYDOMAIN
 app.$MYDOMAIN
 monitor.$MYDOMAIN
 EOF
-[ "${HYPHAE_ENABLED:-false}" = "true" ] && echo "chat.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
-[ "${LIVE_ENABLED:-false}" = "true" ] && echo "live.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
-[ "${SPOREBOARD_ENABLED:-false}" = "true" ] && echo "sporeboard.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
-[ "${SPORECHAT_ENABLED:-false}" = "true" ] && echo "meet.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
-[ "${LIVEKIT_ENABLED:-false}" = "true" ] && echo "rtc.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
+[ -d "/var/lib/machines/hyphae" ] && echo "chat.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
+[ -d "/var/lib/machines/mycelium-live" ] && echo "live.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
+[ -d "/var/lib/machines/sporeboard" ] && echo "sporeboard.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
+[ -d "/var/lib/machines/sporechat" ] && echo "meet.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
+[ -d "/var/lib/machines/mercury" ] && echo "api.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
+[ -d "/var/lib/machines/livekit" ] && echo "rtc.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
 
 echo "Cert domains:"
 cat /srv/haproxy/cert-domains.txt | grep -v '^#' | grep -v '^$'
