@@ -79,7 +79,7 @@ defmodule GcIndexRelay.NIP29.Validation do
     end
   end
 
-  defp is_admin?(group_id, pubkey) do
+  def is_admin?(group_id, pubkey) do
     case Base.decode16(pubkey, case: :lower) do
       {:ok, pubkey_bin} ->
         creator_query = 
@@ -112,7 +112,7 @@ defmodule GcIndexRelay.NIP29.Validation do
     end
   end
 
-  defp is_member?(group_id, pubkey) do
+  def is_member?(group_id, pubkey) do
     if is_admin?(group_id, pubkey) do
       true
     else

@@ -61,6 +61,7 @@ defmodule GcIndexRelay.MixProject do
       {:bandit, "~> 1.5"},
       {:lib_secp256k1, "~> 0.7.1"},
       {:phoenix_swagger, "~> 0.8"},
+      {:joken, "~> 2.6"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end

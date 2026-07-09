@@ -144,3 +144,9 @@ end
 config :gc_index_relay,
   relay_privkey: System.get_env("MERCURY_RELAY_PRIVKEY") || nil,
   relay_pubkey: System.get_env("MERCURY_RELAY_PUBKEY") || nil
+
+# LiveKit Integration Config
+config :gc_index_relay,
+  livekit_api_key: System.get_env("LIVEKIT_API_KEY") || nil,
+  livekit_api_secret: System.get_env("LIVEKIT_API_SECRET") || nil,
+  livekit_url: System.get_env("LIVEKIT_URL") || nil

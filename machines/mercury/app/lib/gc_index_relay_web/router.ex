@@ -70,6 +70,14 @@ defmodule GcIndexRelayWeb.Router do
     plug GcIndexRelayWeb.Plugs.RequireRole, :authenticated
   end
 
+  # ── LiveKit endpoints (require authenticated token for NIP-98 auth) ──
+  scope "/api", GcIndexRelayWeb do
+    pipe_through :authenticated_api
+
+    get "/livekit/:group_id", LiveKitController, :get_token
+    get "/livekit-dm/:room_id", LiveKitController, :get_dm_token
+  end
+
   # ── Moderation endpoints (require mod or admin role, checked per-action) ──
   scope "/api/mod", GcIndexRelayWeb do
     pipe_through :authenticated_api
