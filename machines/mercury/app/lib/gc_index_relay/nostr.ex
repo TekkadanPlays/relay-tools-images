@@ -70,7 +70,8 @@ defmodule GcIndexRelay.Nostr do
          {:ok, event} <- Validator.validate_signature(event),
          {:ok, event} <- Validator.validate_not_protected(event),
          {:ok, event} <- validate_not_banned(event),
-         {:ok, event} <- Moderation.validate_community_access(event) do
+         {:ok, event} <- Moderation.validate_community_access(event),
+         {:ok, event} <- GcIndexRelay.NIP29.Validation.validate_permissions(event) do
       
       if event.kind == 5 do
         process_deletions(event)

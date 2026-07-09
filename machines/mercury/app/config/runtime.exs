@@ -136,8 +136,11 @@ if config_env() == :prod do
   # We also recommend setting `force_ssl` in your config/prod.exs,
   # ensuring no data is ever sent via http, always redirecting to https:
   #
-  #     config :gc_index_relay, GcIndexRelayWeb.Endpoint,
-  #       force_ssl: [hsts: true]
-  #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 end
+
+# NIP-29 Relay Private Key
+# Used for synthesizing group discovery events (kind 39000).
+config :gc_index_relay,
+  relay_privkey: System.get_env("MERCURY_RELAY_PRIVKEY") || nil,
+  relay_pubkey: System.get_env("MERCURY_RELAY_PUBKEY") || nil

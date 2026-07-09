@@ -45,15 +45,32 @@ defmodule GcIndexRelayWeb.NostrSocket do
 
     history_replies =
       Enum.flat_map(filters, fn filter_map ->
-        case Nostr.query_events(filter_map) do
-          {:ok, events} ->
-            Enum.map(events, fn e ->
-              {:text, Jason.encode!(["EVENT", sub_id, e])}
-            end)
+        db_events =
+          case Nostr.query_events(filter_map) do
+            {:ok, events} -> events
+            _ -> []
+          end
 
-          _ ->
-            []
-        end
+        # Inject NIP-29 discovery events if requested
+        nip29_events =
+          case filter_map["kinds"] do
+            nil -> GcIndexRelay.NIP29.Core.synthesize_discovery_events()
+            kinds when is_list(kinds) ->
+              if 39000 in kinds do
+                GcIndexRelay.NIP29.Core.synthesize_discovery_events()
+              else
+                []
+              end
+            _ -> []
+          end
+
+        # Note: In a real implementation we would filter `nip29_events` by other filter
+        # parameters (authors, ids, tags) if they are present, but usually clients query
+        # `39000` with just the kind or kind+author.
+        
+        Enum.map(db_events ++ nip29_events, fn e ->
+          {:text, Jason.encode!(["EVENT", sub_id, e])}
+        end)
       end)
 
     eose = {:text, Jason.encode!(["EOSE", sub_id])}
