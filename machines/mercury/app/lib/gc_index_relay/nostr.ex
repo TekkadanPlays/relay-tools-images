@@ -102,6 +102,11 @@ defmodule GcIndexRelay.Nostr do
 
       if match?({:ok, _}, result) do
         Phoenix.PubSub.broadcast(GcIndexRelay.PubSub, "events", {:new_event, event})
+        
+        if event.kind == 9021 do
+          # Use a Task to avoid blocking the caller
+          Task.start(fn -> GcIndexRelay.NIP29.Core.auto_approve_join_request(event) end)
+        end
       end
 
       result

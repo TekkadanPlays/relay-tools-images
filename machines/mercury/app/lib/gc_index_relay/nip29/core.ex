@@ -157,6 +157,50 @@ defmodule GcIndexRelay.NIP29.Core do
     |> Enum.uniq()
   end
 
+  def auto_approve_join_request(join_event) do
+    # Extract group_id
+    group_id = Enum.find_value(join_event.tags || [], fn
+      ["h", gid | _] -> gid
+      _ -> nil
+    end)
+
+    if group_id do
+      privkey_hex = Application.get_env(:gc_index_relay, :relay_privkey)
+      pubkey_hex = Application.get_env(:gc_index_relay, :relay_pubkey)
+
+      if not is_nil(privkey_hex) and not is_nil(pubkey_hex) and privkey_hex != "" do
+        privkey_hex = String.trim(privkey_hex) |> String.downcase()
+        pubkey_hex = String.trim(pubkey_hex) |> String.downcase()
+        
+        with {:ok, privkey_bin} <- Base.decode16(privkey_hex, case: :lower) do
+          # Synthesize a 9000 event adding the user
+          tags = [["h", group_id], ["p", join_event.pubkey]]
+          
+          case sign_and_build_event(9000, tags, privkey_bin, pubkey_hex) do
+            %PubEvent{} = add_event ->
+              # Save it to the database
+              case PubEvent.to_db(add_event) do
+                {:ok, db_event} ->
+                  tags_as_maps = Enum.map(db_event.tags, &Map.from_struct/1)
+                  attrs = db_event |> Map.from_struct() |> Map.put(:tags, tags_as_maps)
+
+                  case Repo.insert(Event.changeset(%Event{}, attrs)) do
+                    {:ok, _} ->
+                      # Broadcast the event
+                      Phoenix.PubSub.broadcast(GcIndexRelay.PubSub, "events", {:new_event, add_event})
+                      Logger.info("Auto-approved join request for pubkey #{join_event.pubkey} in group #{group_id}")
+                    _ ->
+                      Logger.error("Failed to insert auto-generated 9000 event")
+                  end
+                _ -> :ok
+              end
+            _ -> :ok
+          end
+        end
+      end
+    end
+  end
+
   defp sign_and_build_event(kind, tags, privkey_bin, pubkey_hex) do
     event = %PubEvent{
       pubkey: pubkey_hex,
