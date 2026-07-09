@@ -54,7 +54,13 @@ defmodule GcIndexRelay.NIP29.Core do
         %Event{} = metadata_event ->
           metadata_event.tags
           |> Enum.reject(fn tag -> tag.name == "h" end)
-          |> Enum.map(fn tag -> [tag.name, tag.value] ++ (tag.extra || []) end)
+          |> Enum.map(fn tag ->
+            additional = tag.additional_values || []
+            case tag.value do
+              nil -> [tag.name]
+              v -> [tag.name, v | additional]
+            end
+          end)
         nil ->
           []
       end
