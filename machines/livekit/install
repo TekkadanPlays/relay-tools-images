@@ -28,11 +28,10 @@ systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
 	echo "$APP">/etc/hostname
 
 	apt update
-	apt -y install --no-install-suggests wget curl ca-certificates
+	apt -y install --no-install-suggests curl ca-certificates jq
 
 	echo "Downloading prebuilt LiveKit Server..."
-	wget -qO- https://github.com/livekit/livekit/releases/latest/download/livekit_linux_amd64.tar.gz | tar xz
-	cp livekit-server /usr/local/bin/livekit-server
+	curl -sSL https://get.livekit.io | bash
 
 	systemctl enable livekit.service
 EOF
