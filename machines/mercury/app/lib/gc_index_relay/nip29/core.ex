@@ -76,7 +76,7 @@ defmodule GcIndexRelay.NIP29.Core do
       
       # Sign with schnorr
       try do
-        {:ok, sig_bin} = Secp256k1.schnorr_sign(id_bin, privkey_bin)
+        sig_bin = Secp256k1.schnorr_sign(id_bin, privkey_bin)
         %{event | sig: Base.encode16(sig_bin, case: :lower)}
       rescue
         e -> 
