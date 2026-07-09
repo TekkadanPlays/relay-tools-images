@@ -7,7 +7,7 @@ defmodule GcIndexRelayWeb.LiveKitController do
   Requires a valid NIP-98 Authorization header.
   """
   def get_token(conn, %{"group_id" => group_id}) do
-    pubkey = conn.assigns[:pubkey]
+    pubkey = conn.assigns[:current_pubkey] || conn.assigns[:pubkey]
 
     if is_nil(pubkey) do
       conn
@@ -26,7 +26,7 @@ defmodule GcIndexRelayWeb.LiveKitController do
   end
 
   def get_dm_token(conn, %{"room_id" => room_id}) do
-    pubkey = conn.assigns[:pubkey]
+    pubkey = conn.assigns[:current_pubkey] || conn.assigns[:pubkey]
 
     if is_nil(pubkey) do
       conn
