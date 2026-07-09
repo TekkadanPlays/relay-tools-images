@@ -21,7 +21,7 @@ defmodule GcIndexRelayWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
-  socket "/ws", GcIndexRelayWeb.NostrSocket,
+  socket "/", GcIndexRelayWeb.NostrSocket,
     websocket: true,
     longpoll: false
 
