@@ -80,9 +80,9 @@ systemd-nspawn --pipe -M keys-certs-manager /bin/bash << EOF
     mkdir -p /etc/haproxy/certs
 
     if [ -z "$MYEMAIL" ]; then
-        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" $CERT_DOMAINS --agree-tos --register-unsafely-without-email --standalone --preferred-challenges http --non-interactive
+        certbot certonly --cert-name "$MYDOMAIN" --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" $CERT_DOMAINS --agree-tos --register-unsafely-without-email --standalone --preferred-challenges http --non-interactive
     else 
-        certbot certonly --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" $CERT_DOMAINS --agree-tos -m "$MYEMAIL" --standalone --preferred-challenges http --non-interactive
+        certbot certonly --cert-name "$MYDOMAIN" --config-dir="/etc/haproxy/certs" --work-dir="/etc/haproxy/certs" --logs-dir="/etc/haproxy/certs" $CERT_DOMAINS --agree-tos -m "$MYEMAIL" --standalone --preferred-challenges http --non-interactive
     fi
 
     # haproxy needs one file (write to bind mount so haproxy container can see it)

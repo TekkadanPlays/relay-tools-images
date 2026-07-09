@@ -85,7 +85,15 @@ defmodule GcIndexRelay.NIP29.Core do
           []
       end
 
-    tags = [["d", group_id]] ++ metadata_tags
+    livekit_url = Application.get_env(:gc_index_relay, :livekit_url)
+    livekit_tags = 
+      if not is_nil(livekit_url) and livekit_url != "" do
+        [["livekit", livekit_url]]
+      else
+        []
+      end
+
+    tags = [["d", group_id]] ++ metadata_tags ++ livekit_tags
     sign_and_build_event(39000, tags, privkey_bin, pubkey_hex)
   end
 
