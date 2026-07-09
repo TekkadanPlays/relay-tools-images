@@ -51,13 +51,14 @@ defmodule GcIndexRelayWeb.NostrSocket do
             _ -> []
           end
 
-        # Inject NIP-29 discovery events if requested
+        # Inject NIP-29 metadata events if requested
         nip29_events =
           case filter_map["kinds"] do
-            nil -> GcIndexRelay.NIP29.Core.synthesize_discovery_events()
+            nil -> GcIndexRelay.NIP29.Core.synthesize_metadata_events([39000, 39001, 39002])
             kinds when is_list(kinds) ->
-              if 39000 in kinds do
-                GcIndexRelay.NIP29.Core.synthesize_discovery_events()
+              nip29_kinds = Enum.filter(kinds, & &1 in [39000, 39001, 39002])
+              if nip29_kinds != [] do
+                GcIndexRelay.NIP29.Core.synthesize_metadata_events(nip29_kinds)
               else
                 []
               end
