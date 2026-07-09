@@ -140,7 +140,8 @@ defmodule GcIndexRelayWeb.NostrSocket do
     Enum.any?(filters, fn filter ->
       matches_kind?(event, filter) &&
         matches_authors?(event, filter) &&
-        matches_ids?(event, filter)
+        matches_ids?(event, filter) &&
+        matches_tags?(event, filter)
     end)
   end
 
@@ -154,5 +155,14 @@ defmodule GcIndexRelayWeb.NostrSocket do
 
   defp matches_ids?(event, filter) do
     is_nil(filter.ids) or event.id in filter.ids
+  end
+
+  defp matches_tags?(event, filter) do
+    is_nil(filter.tags) or Enum.all?(filter.tags, fn {tag_name, valid_values} ->
+      Enum.any?(event.tags || [], fn
+        [^tag_name, value | _] -> value in valid_values
+        _ -> false
+      end)
+    end)
   end
 end
