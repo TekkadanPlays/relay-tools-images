@@ -172,10 +172,16 @@ echo -e "${CYAN}EXTRAS (optional):${NC}"
 INSTALL_ONI=false
 INSTALL_HYPHAE=false
 INSTALL_ERGO=false
+INSTALL_LIVEKIT=false
 
 if confirm "Install Oni live streaming server?" "n"; then
     INSTALL_ONI=true
     print_service "on" "oni" "Oni — Owncast-based live streaming (Go + InfernoJS)"
+fi
+
+if confirm "Install LiveKit WebRTC server?" "n"; then
+    INSTALL_LIVEKIT=true
+    print_service "on" "livekit" "LiveKit — WebRTC audio/video server"
 fi
 
 if confirm "Install Hyphae IRC web client + Ergo IRC server?" "n"; then
@@ -218,6 +224,7 @@ SERVICES=("mysql" "strfry" "haproxy" "relaycreator" "keys-certs-manager")
 [ "$INSTALL_ONI" = true ] && SERVICES+=("oni")
 [ "$INSTALL_HYPHAE" = true ] && SERVICES+=("hyphae")
 [ "$INSTALL_ERGO" = true ] && SERVICES+=("ergo")
+[ "$INSTALL_LIVEKIT" = true ] && SERVICES+=("livekit")
 [ "$INSTALL_PAYMENTS" = true ] && SERVICES+=("bitcoinknots" "cln" "lnbits")
 [ "$INSTALL_COINOS" = true ] && SERVICES+=("keydb" "coinos")
 
@@ -242,6 +249,7 @@ RSTATE_ENABLED=$INSTALL_RSTATE
 ONI_ENABLED=$INSTALL_ONI
 HYPHAE_ENABLED=$INSTALL_HYPHAE
 ERGO_ENABLED=$INSTALL_ERGO
+LIVEKIT_ENABLED=$INSTALL_LIVEKIT
 PAYMENTS_ENABLED=$INSTALL_PAYMENTS
 COINOS_ENABLED=$INSTALL_COINOS
 EOF

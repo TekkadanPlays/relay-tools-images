@@ -1,0 +1,45 @@
+#!/usr/bin/bash
+# get paths for scripts, the repo parent dir and app name
+SD=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+APP="$(basename $SD)"
+RD="$(dirname "$SD")"
+PASSWORD=creator
+echo $PASSWORD>$RD/$APP.passwd
+
+echo "Copying base Debian image..."
+cp -rfpu $RD/debian /var/lib/machines/$APP
+
+echo "Copying nspawn config..."
+cp $SD/nspawn /etc/systemd/nspawn/$APP.nspawn
+sed -i 's/\r$//' /etc/systemd/nspawn/$APP.nspawn
+
+echo "Copying systemd services..."
+cp $SD/livekit.service /var/lib/machines/$APP/lib/systemd/system/livekit.service
+sed -i 's/\r$//' /var/lib/machines/$APP/lib/systemd/system/livekit.service
+
+# Setup config file
+mkdir -p /srv/livekit
+cp $SD/livekit.yaml /var/lib/machines/$APP/etc/livekit.yaml
+
+echo "Starting systemd-nspawn setup for LiveKit..."
+systemd-nspawn --pipe -q -D /var/lib/machines/$APP /usr/bin/bash << EOF
+	export PATH=/usr/local/go/bin:\$PATH
+	echo -e "$PASSWORD\n$PASSWORD" | passwd
+	echo "$APP">/etc/hostname
+
+	apt update
+	apt -y install --no-install-suggests git build-essential curl ca-certificates
+
+	echo "Cloning and building LiveKit Server..."
+	git clone https://github.com/livekit/livekit.git /app
+	cd /app
+	# Checkout a stable tag if needed, otherwise main
+	# git checkout v1.7.0 
+	go build -o livekit-server ./cmd/server
+	cp livekit-server /usr/local/bin/livekit-server
+
+	systemctl enable livekit.service
+EOF
+
+# Ensure script stops the container after setup
+systemctl stop systemd-nspawn@$APP

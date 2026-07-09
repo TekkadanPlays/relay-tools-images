@@ -63,6 +63,7 @@ EOF
 [ "${LIVE_ENABLED:-false}" = "true" ] && echo "live.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
 [ "${SPOREBOARD_ENABLED:-false}" = "true" ] && echo "sporeboard.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
 [ "${SPORECHAT_ENABLED:-false}" = "true" ] && echo "meet.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
+[ "${LIVEKIT_ENABLED:-false}" = "true" ] && echo "rtc.$MYDOMAIN" >> /srv/haproxy/cert-domains.txt
 
 echo "Cert domains:"
 cat /srv/haproxy/cert-domains.txt | grep -v '^#' | grep -v '^$'
@@ -588,6 +589,24 @@ COINEOF
     echo ""
     echo "CoinOS is now available as a wallet backend."
     echo "Users authenticate automatically via their Nostr extension (NIP-07)."
+fi
+
+if [ "${LIVEKIT_ENABLED:-false}" = "true" ]; then
+    echo "Configuring LiveKit..."
+    
+    if [ ! -f "/srv/livekit/livekit.yaml" ]; then
+        LIVEKIT_API_KEY=$(openssl rand -hex 12)
+        LIVEKIT_API_SECRET=$(openssl rand -hex 32)
+        mkdir -p /srv/livekit
+        
+        cp machines/livekit/livekit.yaml /srv/livekit/livekit.yaml
+        sed -i "s/REPLACE_API_KEY/$LIVEKIT_API_KEY/" /srv/livekit/livekit.yaml
+        sed -i "s/REPLACE_API_SECRET/$LIVEKIT_API_SECRET/" /srv/livekit/livekit.yaml
+        sed -i "s/REPLACE_DOMAIN/rtc.$MYDOMAIN/" /srv/livekit/livekit.yaml
+    fi
+    
+    machinectl start livekit
+    echo "LiveKit server started."
 fi
 
 echo "All done!"
