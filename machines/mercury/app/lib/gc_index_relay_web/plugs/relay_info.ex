@@ -25,6 +25,10 @@ defmodule GcIndexRelayWeb.Plugs.RelayInfo do
         |> Map.new()
         |> resolve_image_urls(base_url)
 
+      # Inject NIP-11 pubkey from env var so clients know who authors the NIP-29 events
+      pubkey = Application.get_env(:gc_index_relay, :relay_pubkey)
+      relay_info = if pubkey && pubkey != "", do: Map.put(relay_info, :pubkey, pubkey), else: relay_info
+
       conn
       |> put_resp_content_type("application/nostr+json")
       |> send_resp(200, Jason.encode!(relay_info))
