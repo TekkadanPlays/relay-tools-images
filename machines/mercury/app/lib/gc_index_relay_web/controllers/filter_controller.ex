@@ -40,6 +40,7 @@ defmodule GcIndexRelayWeb.FilterController do
   """
   def index(conn, params) do
     with {:ok, filter_map} <- parse_query_params(params),
+         filter_map = apply_community_context(filter_map, conn.assigns[:community_atag]),
          {:ok, events} <- Nostr.query_events(filter_map) do
       render(conn, :index, events: events)
     end
@@ -67,8 +68,32 @@ defmodule GcIndexRelayWeb.FilterController do
   def query(conn, filter_params) do
     with {:ok, filter} <- validate_required_params(filter_params),
          {:ok, filter} <- validate_param_values(filter),
+         filter = apply_community_context(filter, conn.assigns[:community_atag]),
          {:ok, events} <- Nostr.query_events(filter) do
       render(conn, :index, events: events)
+    end
+  end
+
+  defp apply_community_context(filter_map, nil), do: filter_map
+  defp apply_community_context(filter_map, community_id) do
+    # The client must provide the full #a tag (34550:pubkey:community_id).
+    # We enforce that the provided #a tag matches the community_id in the URL path.
+    client_a_tags = Map.get(filter_map, "#a", [])
+    
+    valid_tags = Enum.filter(client_a_tags, fn tag ->
+      String.ends_with?(tag, ":#{community_id}")
+    end)
+
+    if Enum.empty?(valid_tags) and not Enum.empty?(client_a_tags) do
+      # Client tried to query a different community than the URL path
+      Map.put(filter_map, "#a", ["invalid_community_boundary"])
+    else
+      # If they didn't provide one, or provided multiple, we restrict to the valid ones.
+      # If they provided none, ideally we should inject the exact a tag, but we don't know the admin pubkey here.
+      # Since Mycelium clients always pass the #a tag, we just let it through if it matches, 
+      # or force the wildcard matching in the DB (which is harder).
+      # For now, we trust the client's #a tag if it ends with the community_id.
+      Map.put(filter_map, "#a", if(Enum.empty?(valid_tags), do: ["*:#{community_id}"], else: valid_tags))
     end
   end
 

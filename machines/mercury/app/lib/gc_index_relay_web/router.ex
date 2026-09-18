@@ -12,6 +12,7 @@ defmodule GcIndexRelayWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug GcIndexRelayWeb.Plugs.CommunityContext
   end
 
   scope "/", GcIndexRelayWeb do
@@ -22,16 +23,22 @@ defmodule GcIndexRelayWeb.Router do
 
   get "/health", GcIndexRelayWeb.HealthController, :check
 
-  scope "/api", GcIndexRelayWeb do
+  scope "/c/:community/api", GcIndexRelayWeb do
     pipe_through :api
 
     get "/", ApiController, :index
     get "/events", FilterController, :index
     post "/events/filter", FilterController, :query
+    get "/events/stream", EventStreamController, :stream
     post "/publications/search", PublicationSearchController, :search
     post "/publications/content/search", PublicationContentSearchController, :search
+    post "/inbox/:pubkey", InboxController, :create
     resources "/events", EventController, only: [:show, :create, :delete]
   end
+
+  # Keep a global API scope for non-community specific endpoints if needed,
+  # but right now everything is routed through /c/:community.
+  # If global queries are still needed, they can be re-added here.
 
   # ── Auth endpoints (public, no token required) ──
   scope "/api/auth", GcIndexRelayWeb do

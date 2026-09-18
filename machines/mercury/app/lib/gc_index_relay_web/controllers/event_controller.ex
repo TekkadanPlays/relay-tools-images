@@ -34,12 +34,28 @@ defmodule GcIndexRelayWeb.EventController do
       |> Map.put_new(:content, "")
       |> then(&struct(PubEvent, &1))
 
-    with {:ok, _event} <- Nostr.create_event(pub_event) do
+    community_atag = conn.assigns[:community_atag]
+
+    if valid_community_partition?(pub_event, community_atag) do
+      with {:ok, _event} <- Nostr.create_event(pub_event) do
+        conn
+        |> put_status(:created)
+        |> put_resp_header("location", ~p"/api/events/#{pub_event.id}")
+        |> render(:show, event: pub_event)
+      end
+    else
       conn
-      |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/events/#{pub_event.id}")
-      |> render(:show, event: pub_event)
+      |> put_status(:forbidden)
+      |> json(%{error: "Event must include an 'a' tag for the target community: #{community_atag}"})
     end
+  end
+
+  defp valid_community_partition?(_pub_event, nil), do: true
+  defp valid_community_partition?(pub_event, community_id) do
+    Enum.any?(pub_event.tags, fn
+      ["a", tag_val | _] -> String.ends_with?(tag_val, ":#{community_id}")
+      _ -> false
+    end)
   end
 
   swagger_path :show do
