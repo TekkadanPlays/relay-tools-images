@@ -38,7 +38,20 @@ defmodule GcIndexRelayWeb.Router do
 
   # Keep a global API scope for non-community specific endpoints if needed,
   # but right now everything is routed through /c/:community.
-  # If global queries are still needed, they can be re-added here.
+  # ── Instance-Level API (Settings, Discovery, Merged Feeds) ──
+  scope "/api", GcIndexRelayWeb do
+    pipe_through :api
+
+    # Merged feed queries (requires #a tags in the filter)
+    post "/events/filter", FilterController, :query_global
+
+    # Instance Discovery
+    get "/communities", CommunityDiscoveryController, :index
+
+    # Mycelium-hosted app settings & subscriptions (Kind 30078 & NIP-51)
+    get "/settings/:pubkey", SettingsController, :show
+    post "/settings/:pubkey", SettingsController, :update
+  end
 
   # ── Auth endpoints (public, no token required) ──
   scope "/api/auth", GcIndexRelayWeb do

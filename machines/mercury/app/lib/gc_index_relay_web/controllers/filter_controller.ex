@@ -74,6 +74,18 @@ defmodule GcIndexRelayWeb.FilterController do
     end
   end
 
+  @doc """
+  POST /api/events/filter (Global) - Query events across multiple communities.
+  Requires the client to pass the #a tags they wish to query.
+  """
+  def query_global(conn, filter_params) do
+    with {:ok, filter} <- validate_required_params(filter_params),
+         {:ok, filter} <- validate_param_values(filter),
+         {:ok, events} <- Nostr.query_events(filter) do
+      render(conn, :index, events: events)
+    end
+  end
+
   defp apply_community_context(filter_map, nil), do: filter_map
   defp apply_community_context(filter_map, community_id) do
     # The client must provide the full #a tag (34550:pubkey:community_id).
