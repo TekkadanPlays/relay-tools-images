@@ -16,9 +16,17 @@ defmodule GcIndexRelayWeb.CommunityDiscoveryController do
     case Nostr.query_events(filter) do
       {:ok, events} ->
         # Render using the existing EventView
-        conn
-        |> put_view(GcIndexRelayWeb.EventView)
-        |> render("index.json", events: events)
+        json(conn, Enum.map(events, fn e ->
+          %{
+            id: e.id,
+            pubkey: e.pubkey,
+            created_at: e.created_at,
+            kind: e.kind,
+            content: e.content,
+            sig: e.sig,
+            tags: e.tags
+          }
+        end))
         
       {:error, _reason} ->
         conn
@@ -27,3 +35,4 @@ defmodule GcIndexRelayWeb.CommunityDiscoveryController do
     end
   end
 end
+
